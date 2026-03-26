@@ -7,82 +7,98 @@ st.set_page_config(page_title="Utica Deal Model", layout="wide")
 st.title("Utica Deal Model")
 
 # -----------------------------
-# Sidebar inputs
+# Deal-level inputs
 # -----------------------------
-st.sidebar.header("Deal Inputs")
-
-use_acq_override = st.sidebar.checkbox("Use Acquisition Cost Override", value=False)
-
-acq_cost_override = None
-if use_acq_override:
-    acq_cost_override = st.sidebar.number_input("Acquisition Cost Override ($)", value=0.0)
+st.sidebar.header("Deal-Level Inputs")
 
 deal_inputs = {
     "oil_price": st.sidebar.number_input("Oil Price ($/bbl)", value=70.0),
     "gas_price": st.sidebar.number_input("Gas Price ($/mcf)", value=3.75),
-    "gross_wells": st.sidebar.number_input("Gross Wells", value=2.0),
-    "net_acres": st.sidebar.number_input("Net Acres", value=28.6),
-    "bid_per_acre": st.sidebar.number_input("Bid per Acre ($)", value=8000.0),
-    "lateral_length": st.sidebar.number_input("Lateral Length (ft)", value=10000),
-    "dc_cost_per_ft": st.sidebar.number_input("D&C Cost ($/ft)", value=750.0),
-    "unit_acres": st.sidebar.number_input("Unit Acres", value=800.0),
-    "pct_unitized": st.sidebar.number_input("Pct Unitized", value=0.90),
-    "net_revenue_interest": st.sidebar.number_input("Net Revenue Interest", value=0.80),
-    "flowback_delay": st.sidebar.number_input("Flowback Delay (months)", value=4),
-    "acq_cost_override": acq_cost_override,
 }
 
-results = run_deal_model(deal_inputs)
+# -----------------------------
+# Slot table input
+# -----------------------------
+st.header("Slot Inputs")
+
+default_slots = pd.DataFrame([
+    {
+        "slot_id": 1,
+        "lateral_length": 7000,
+        "gross_wells": 2.0,
+        "net_acres": 28.6,
+        "bid_per_acre": 8000.0,
+        "unit_acres": 800.0,
+        "pct_unitized": 0.90,
+        "net_revenue_interest": 0.80,
+        "dc_cost_per_ft": 750.0,
+    },
+    {
+        "slot_id": 2,
+        "lateral_length": 10000,
+        "gross_wells": 2.0,
+        "net_acres": 28.6,
+        "bid_per_acre": 8000.0,
+        "unit_acres": 800.0,
+        "pct_unitized": 0.90,
+        "net_revenue_interest": 0.80,
+        "dc_cost_per_ft": 750.0,
+    }
+])
+
+slot_df = st.data_editor(
+    default_slots,
+    num_rows="dynamic",
+    use_container_width=True
+)
 
 # -----------------------------
-# Top summary
+# Run model for each slot
 # -----------------------------
-col1, col2, col3, col4 = st.columns(4)
+results_list = []
+
+for _, row in slot_df.iterrows():
+    slot_inputs = {
+        **deal_inputs,
+        "gross_wells": row["gross_wells"],
+        "net_acres": row["net_acres"],
+        "bid_per_acre": row["bid_per_acre"],
+        "lateral_length": row["lateral_length"],
+        "dc_cost_per_ft": row["dc_cost_per_ft"],
+        "unit_acres": row["unit_acres"],
+        "pct_unitized": row["pct_unitized"],
+        "net_revenue_interest": row["net_revenue_interest"],
+        "flowback_delay": 4,
+        "acq_cost_override": None,
+    }
+
+    result = run_deal_model(slot_inputs)
+    result["slot_id"] = row["slot_id"]
+
+    results_list.append(result)
+
+results_df = pd.DataFrame(results_list)
+
+# -----------------------------
+# Slot-level results
+# -----------------------------
+st.subheader("Slot-Level Results")
+st.dataframe(results_df, use_container_width=True)
+
+# -----------------------------
+# Deal rollup
+# -----------------------------
+st.subheader("Deal Summary")
+
+deal_summary = results_df.sum(numeric_only=True)
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Working Interest", f"{results['working_interest']:.4f}")
+    st.metric("Total Net Revenue", f"${deal_summary['net_revenue']:,.0f}")
 
 with col2:
-    st.metric("Net Wells", f"{results['net_wells_calc']:.4f}")
+    st.metric("Total Capex", f"${deal_summary['gross_capex']:,.0f}")
 
 with col3:
-    st.metric("Acquisition Cost", f"${results['acquisition_cost']:,.0f}")
-
-with col4:
-    st.metric("Gross Capex", f"${results['gross_capex']:,.0f}")
-
-# -----------------------------
-# Revenue summary
-# -----------------------------
-col5, col6, col7 = st.columns(3)
-
-with col5:
-    st.metric("Revenue / Well", f"${results['revenue_per_well']:,.0f}")
-
-with col6:
-    st.metric("Gross Revenue", f"${results['gross_revenue']:,.0f}")
-
-with col7:
-    st.metric("Net Revenue", f"${results['net_revenue']:,.0f}")
-
-# -----------------------------
-# Input summary
-# -----------------------------
-st.subheader("Deal Input Summary")
-
-input_summary = pd.DataFrame([
-    {"Input": k, "Value": v} for k, v in deal_inputs.items()
-])
-
-st.dataframe(input_summary, use_container_width=True, hide_index=True)
-
-# -----------------------------
-# Results summary
-# -----------------------------
-st.subheader("Results Summary")
-
-results_summary = pd.DataFrame([
-    {"Metric": k, "Value": v} for k, v in results.items()
-])
-
-st.dataframe(results_summary, use_container_width=True, hide_index=True)
+    st.metric("Total Acquisition", f"${deal_summary['acquisition_cost']:,.0f}")
