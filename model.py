@@ -448,6 +448,7 @@ def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, gl
             deal_settings=deal_settings,
             type_curve_library=type_curve_library,
             global_assumptions=global_assumptions,
+            total_net_acres=total_net_acres,
         )
 
         slot_df = align_to_financial_calendar(
@@ -619,6 +620,8 @@ def prepare_deal_settings(deal_inputs):
         "effective_date": effective_date,
         "use_bid_override": bool(deal_inputs.get("use_bid_override", False)),
         "bid_override": float(deal_inputs.get("bid_override", 0.0)),
+        "use_acquisition_override": bool(deal_inputs.get("use_acquisition_override", False)),
+        "acquisition_cost_override": float(deal_inputs.get("acquisition_cost_override", 0.0)),
         "promote_enabled": bool(deal_inputs.get("promote_enabled", False)),
         "acreage_carry": float(deal_inputs.get("acreage_carry", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
         "through_first_well_carry": float(deal_inputs.get("through_first_well_carry", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
