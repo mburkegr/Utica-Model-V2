@@ -121,7 +121,17 @@ results_df = pd.DataFrame(results_list)
 # Slot-level results
 # -----------------------------
 st.subheader("Slot-Level Results")
-st.dataframe(results_df, use_container_width=True, hide_index=True)
+results_display = results_df.rename(columns={
+    "working_interest": "Working Interest",
+    "net_wells_calc": "Net Wells",
+    "revenue_per_well": "Revenue / Well",
+    "gross_revenue": "Gross Revenue",
+    "net_revenue": "Net Revenue",
+    "acquisition_cost": "Acquisition Cost",
+    "gross_capex": "Gross Capex",
+})
+
+st.dataframe(results_display, use_container_width=True)
 
 # -----------------------------
 # Deal rollup
