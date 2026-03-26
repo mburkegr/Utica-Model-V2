@@ -130,14 +130,26 @@ def calc_slot_metrics(slot, deal_settings):
         working_interest = (float(slot["net_acres"]) / unit_acres_final) * float(slot["pct_unitized"])
 
     net_wells = working_interest * float(slot["gross_wells"])
-    acquisition_cost = float(slot["net_acres"]) * bid_price_final
+
+    use_acquisition_override = bool(deal_settings.get("use_acquisition_override", False))
+    acquisition_cost_override = float(deal_settings.get("acquisition_cost_override", 0.0))
+
+    if use_acquisition_override:
+    total_net_acres = float(slot_inputs["net_acres"].astype(float).sum())
+
+        if total_net_acres == 0:
+            acquisition_cost = 0.0
+        else:
+            acquisition_cost = (float(slot["net_acres"]) / total_net_acres) * acquisition_cost_override
+    else:
+        acquisition_cost = float(slot["net_acres"]) * bid_price_final
 
     slot["bid_price_final"] = bid_price_final
     slot["unit_acres_final"] = unit_acres_final
     slot["working_interest"] = working_interest
     slot["net_wells_calc"] = net_wells
     slot["acquisition_cost"] = acquisition_cost
-
+    
     return slot
 
 
