@@ -14,7 +14,6 @@ except:
 def load_type_curve_library(file_path="type_curve_library.xlsx"):
     tc_monthly = pd.read_excel(file_path, sheet_name="tc_monthly")
     tc_metadata = pd.read_excel(file_path, sheet_name="tc_metadata")
-
     return tc_monthly, tc_metadata
 
 
@@ -49,11 +48,12 @@ def build_production(tc, lateral_length, base_length, start_date):
 
 
 # -----------------------------
-# NGL Calculations
+# NGL Calculations (improved)
 # -----------------------------
-def calc_ngl(gas_series, ngl_yield):
-    # mcf → barrels
-    return gas_series * ngl_yield / 6
+def calc_ngl(gas_series, ngl_yield, shrink=0.85):
+    gas_sales = gas_series * shrink
+    ngl_bbls = gas_series * ngl_yield / 6
+    return gas_sales, ngl_bbls
 
 
 # -----------------------------
@@ -63,7 +63,7 @@ def calc_revenue(df, oil_price, gas_price, ngl_price=25):
     df = df.copy()
 
     df["oil_rev"] = df["oil"] * oil_price
-    df["gas_rev"] = df["gas"] * gas_price
+    df["gas_rev"] = df["gas_sales"] * gas_price
     df["ngl_rev"] = df["ngl"] * ngl_price
 
     df["total_revenue"] = df["oil_rev"] + df["gas_rev"] + df["ngl_rev"]
@@ -89,44 +89,77 @@ def calc_costs(df, loe_per_month=5000, tax_rate=0.07):
 # Slot Cash Flow
 # -----------------------------
 def build_slot_cashflow(
-    tc_name,
-    lateral_length,
-    spud_date,
-    flowback_delay,
+    row,
     tc_monthly,
     tc_metadata,
-    oil_price,
-    gas_price,
-    ngl_yield,
+    deal_inputs,
 ):
+    tc_name = row["tc_name"]
+    lateral_length = row["lateral_length"]
+
     tc, base_length = get_type_curve(tc_name, tc_monthly, tc_metadata)
+
+    # timing assumptions (can expose later)
+    spud_date = pd.to_datetime("2027-01-01")
+    flowback_delay = 4
 
     start_date = spud_date + pd.DateOffset(months=flowback_delay)
 
     prod = build_production(tc, lateral_length, base_length, start_date)
 
-    prod["ngl"] = calc_ngl(prod["gas"], ngl_yield)
+    # NGL + shrink
+    gas_sales, ngl = calc_ngl(prod["gas"], ngl_yield=5.2, shrink=0.85)
+    prod["gas_sales"] = gas_sales
+    prod["ngl"] = ngl
 
-    prod = calc_revenue(prod, oil_price, gas_price)
+    # revenue
+    prod = calc_revenue(
+        prod,
+        oil_price=deal_inputs["oil_price"],
+        gas_price=deal_inputs["gas_price"],
+    )
+
+    # costs
     prod = calc_costs(prod)
 
-    prod["cash_flow"] = prod["total_revenue"] - prod["total_cost"]
+    # net revenue interest
+    nri = row["net_revenue_interest"]
+    prod["net_cash_flow"] = (prod["total_revenue"] - prod["total_cost"]) * nri
+
+    # capex + acquisition
+    acquisition = row["net_acres"] * row["bid_per_acre"]
+    capex = row["gross_wells"] * row["lateral_length"] * row["dc_cost_per_ft"]
+
+    first_date = prod["date"].min()
+    prod.loc[prod["date"] == first_date, "net_cash_flow"] -= (acquisition + capex)
+
+    prod["slot_id"] = row["slot_id"]
 
     return prod
 
 
 # -----------------------------
-# Roll Up Slots
+# Build All Slots
 # -----------------------------
-def roll_up_deal(slot_dfs):
-    deal_df = pd.concat(slot_dfs)
+def build_all_slots(slot_df, tc_monthly, tc_metadata, deal_inputs):
+    all_slots = []
 
+    for _, row in slot_df.iterrows():
+        slot_cf = build_slot_cashflow(row, tc_monthly, tc_metadata, deal_inputs)
+        all_slots.append(slot_cf)
+
+    return pd.concat(all_slots).reset_index(drop=True)
+
+
+# -----------------------------
+# Roll Up Deal
+# -----------------------------
+def roll_up_deal(all_slots_df):
     deal_df = (
-        deal_df.groupby("date")
+        all_slots_df.groupby("date")
         .sum(numeric_only=True)
         .reset_index()
     )
-
     return deal_df
 
 
@@ -138,7 +171,7 @@ def calc_irr(df):
         return None
 
     try:
-        return pyxirr.xirr(df["date"], df["cash_flow"])
+        return pyxirr.xirr(df["date"], df["net_cash_flow"])
     except:
         return None
 
@@ -147,13 +180,13 @@ def calc_irr(df):
 # MOIC
 # -----------------------------
 def calc_moic(df):
-    total_investment = abs(df["cash_flow"][df["cash_flow"] < 0].sum())
-    total_return = df["cash_flow"][df["cash_flow"] > 0].sum()
+    invested = abs(df["net_cash_flow"][df["net_cash_flow"] < 0].sum())
+    returned = df["net_cash_flow"][df["net_cash_flow"] > 0].sum()
 
-    if total_investment == 0:
+    if invested == 0:
         return None
 
-    return total_return / total_investment
+    return returned / invested
 
 
 # -----------------------------
@@ -162,38 +195,11 @@ def calc_moic(df):
 def run_deal_model(slot_df, deal_inputs):
     tc_monthly, tc_metadata = load_type_curve_library()
 
-    slot_results = []
+    all_slots_df = build_all_slots(slot_df, tc_monthly, tc_metadata, deal_inputs)
 
-    for _, row in slot_df.iterrows():
-        spud_date = pd.to_datetime("2027-01-01")
-
-        slot_cf = build_slot_cashflow(
-            tc_name=row["tc_name"],
-            lateral_length=row["lateral_length"],
-            spud_date=spud_date,
-            flowback_delay=4,
-            tc_monthly=tc_monthly,
-            tc_metadata=tc_metadata,
-            oil_price=deal_inputs["oil_price"],
-            gas_price=deal_inputs["gas_price"],
-            ngl_yield=5.2,
-        )
-
-        acquisition = row["net_acres"] * row["bid_per_acre"]
-
-        capex = row["gross_wells"] * row["lateral_length"] * row["dc_cost_per_ft"]
-
-        # add upfront costs
-        first_date = slot_cf["date"].min()
-        slot_cf.loc[slot_cf["date"] == first_date, "cash_flow"] -= (
-            acquisition + capex
-        )
-
-        slot_results.append(slot_cf)
-
-    deal_df = roll_up_deal(slot_results)
+    deal_df = roll_up_deal(all_slots_df)
 
     irr = calc_irr(deal_df)
     moic = calc_moic(deal_df)
 
-    return deal_df, irr, moic
+    return all_slots_df, deal_df, irr, moic
