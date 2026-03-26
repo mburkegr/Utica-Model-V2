@@ -104,9 +104,9 @@ st.sidebar.header("Deal-Level Inputs")
 st.sidebar.subheader("Timing")
 effective_date = st.sidebar.date_input("Effective Date", value=next_month_start())
 
-use_acquisition_override = st.checkbox("Use Acquisition Cost Override", value=False)
+use_acquisition_override = st.sidebar.checkbox("Use Acquisition Cost Override", value=False)
 
-acquisition_cost_override = st.number_input(
+acquisition_cost_override = st.sidebar.number_input(
     "Acquisition Cost Override",
     min_value=0.0,
     value=0.0,
