@@ -92,7 +92,13 @@ def resize_slot_df(existing_df, target_slots):
     trimmed_df["slot_id"] = range(1, target_slots + 1)
     return trimmed_df
 
-
+def to_excel_bytes(deal_df, slot_df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        deal_df.to_excel(writer, index=False, sheet_name="Deal Audit")
+        slot_df.to_excel(writer, index=False, sheet_name="Slot Audit")
+    output.seek(0)
+    return output.getvalue()
 # -----------------------------
 # Session state init
 # -----------------------------
