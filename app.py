@@ -11,6 +11,24 @@ st.title("Utica Deal Model")
 # -----------------------------
 # Helpers
 # -----------------------------
+def pretty_column_name(col):
+    return col.replace("_", " ").title()
+
+
+def format_display_df(df):
+    display_df = df.copy()
+
+    for col in display_df.columns:
+        if pd.api.types.is_datetime64_any_dtype(display_df[col]):
+            display_df[col] = display_df[col].dt.strftime("%Y-%m-%d")
+        elif pd.api.types.is_numeric_dtype(display_df[col]):
+            display_df[col] = display_df[col].map(
+                lambda x: f"{x:,.1f}" if pd.notnull(x) else ""
+            )
+
+    display_df.columns = [pretty_column_name(col) for col in display_df.columns]
+    return display_df
+
 @st.cache_data
 def load_tc_names():
     tc_metadata = pd.read_excel("type_curve_library.xlsx", sheet_name="tc_metadata")
@@ -298,14 +316,22 @@ if run_model_clicked:
             deal_inputs
         )
 
-        st.subheader("Deal Monthly Audit")
-        st.dataframe(deal_audit_df)
-
-        st.download_button(
-            "Download Deal Audit CSV",
-            deal_audit_df.to_csv(index=False),
-            file_name="deal_audit.csv"
-        )
+        deal_audit_display_df = format_display_df(deal_audit_df)
+        slot_audit_display_df = format_display_df(slot_audit_df)
+        audit_excel_data = to_excel_bytes(deal_audit_df, slot_audit_df)
+        
+        with st.expander("Deal Monthly Audit", expanded=False):
+            st.dataframe(deal_audit_display_df)
+        
+            st.subheader("Slot Monthly Audit")
+            st.dataframe(slot_audit_display_df)
+        
+            st.download_button(
+                "Download Audit Excel",
+                audit_excel_data,
+                file_name="deal_audit.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
         st.session_state["all_slots_df"] = all_slots_df
         st.session_state["deal_df"] = deal_df
