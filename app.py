@@ -59,15 +59,39 @@ slot_df = st.data_editor(
     use_container_width=True,
     key="slot_editor",
     column_config={
-        "slot_id": st.column_config.NumberColumn("Slot"),
-        "lateral_length": st.column_config.NumberColumn("Lateral Length (ft)"),
-        "gross_wells": st.column_config.NumberColumn("Gross Wells"),
-        "net_acres": st.column_config.NumberColumn("Net Acres"),
-        "bid_per_acre": st.column_config.NumberColumn("$/Acre Bid"),
-        "unit_acres": st.column_config.NumberColumn("Unit Acres"),
-        "pct_unitized": st.column_config.NumberColumn("% Unitized"),
-        "net_revenue_interest": st.column_config.NumberColumn("NRI"),
-        "dc_cost_per_ft": st.column_config.NumberColumn("D&C ($/ft)"),
+        "slot_id": st.column_config.NumberColumn("Slot", format="%d"),
+
+        "lateral_length": st.column_config.NumberColumn(
+            "Lateral Length (ft)", format="%,d"
+        ),
+
+        "gross_wells": st.column_config.NumberColumn(
+            "Gross Wells", format="%.2f"
+        ),
+
+        "net_acres": st.column_config.NumberColumn(
+            "Net Acres", format="%,.1f"
+        ),
+
+        "bid_per_acre": st.column_config.NumberColumn(
+            "$/Acre Bid", format="$%,d"
+        ),
+
+        "unit_acres": st.column_config.NumberColumn(
+            "Unit Acres", format="%,.0f"
+        ),
+
+        "pct_unitized": st.column_config.NumberColumn(
+            "% Unitized", format="%.2f"
+        ),
+
+        "net_revenue_interest": st.column_config.NumberColumn(
+            "NRI", format="%.2f"
+        ),
+
+        "dc_cost_per_ft": st.column_config.NumberColumn(
+            "D&C ($/ft)", format="$%,.0f"
+        ),
     }
 )
 
