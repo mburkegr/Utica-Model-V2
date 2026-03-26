@@ -328,9 +328,11 @@ if run_model_clicked:
         audit_excel_data = to_excel_bytes(deal_audit_df, slot_audit_df)
         
         with st.expander("Deal Monthly Audit", expanded=False):
+        
+            st.subheader("Total Deal Monthly Data")
             st.dataframe(deal_audit_display_df)
         
-            st.subheader("Slot Monthly Audit")
+            st.subheader("Type Curve Monthly Data")
             st.dataframe(slot_audit_display_df)
         
             st.download_button(
@@ -339,7 +341,6 @@ if run_model_clicked:
                 file_name="deal_audit.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
         st.session_state["all_slots_df"] = all_slots_df
         st.session_state["deal_df"] = deal_df
         st.session_state["irr"] = irr
