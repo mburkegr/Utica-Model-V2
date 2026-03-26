@@ -59,44 +59,46 @@ slot_df = st.data_editor(
     use_container_width=True,
     key="slot_editor",
     column_config={
-        "slot_id": st.column_config.NumberColumn("Slot", format="%d"),
-
+        "slot_id": st.column_config.NumberColumn(
+            "Slot",
+            format="%d"
+        ),
         "lateral_length": st.column_config.NumberColumn(
-            "Lateral Length (ft)", format="%,d"
+            "Lateral Length (ft)",
+            format="%,d"
         ),
-
         "gross_wells": st.column_config.NumberColumn(
-            "Gross Wells", format="%.2f"
+            "Gross Wells",
+            format="%.2f"
         ),
-
         "net_acres": st.column_config.NumberColumn(
-            "Net Acres", format="%,.1f"
+            "Net Acres",
+            format="%,.1f"
         ),
-
         "bid_per_acre": st.column_config.NumberColumn(
-            "$/Acre Bid", format="$%,d"
+            "$/Acre Bid",
+            format="$%,d"
         ),
-
         "unit_acres": st.column_config.NumberColumn(
-            "Unit Acres", format="%,.0f"
+            "Unit Acres",
+            format="%,.0f"
         ),
-
         "pct_unitized": st.column_config.NumberColumn(
-            "% Unitized", format="%.0%"
+            "% Unitized",
+            format="%.0%"
         ),
-
         "net_revenue_interest": st.column_config.NumberColumn(
-            "NRI", format="%.0%"
+            "NRI",
+            format="%.0%"
         ),
-
         "dc_cost_per_ft": st.column_config.NumberColumn(
-            "D&C ($/ft)", format="$%,.0f"
+            "D&C ($/ft)",
+            format="$%,.0f"
         ),
     }
 )
 
 slot_df = slot_df.copy()
-
 default_values = {
     "slot_id": 0,
     "lateral_length": 10000,
