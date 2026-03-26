@@ -111,7 +111,7 @@ def build_slot_ngl_factors(
 # -----------------------------
 # Slot metrics
 # -----------------------------
-def calc_slot_metrics(slot, deal_settings):
+def calc_slot_metrics(slot, deal_settings, total_net_acres):
     slot = slot.copy()
 
     if bool(deal_settings["use_bid_override"]):
@@ -135,8 +135,6 @@ def calc_slot_metrics(slot, deal_settings):
     acquisition_cost_override = float(deal_settings.get("acquisition_cost_override", 0.0))
 
     if use_acquisition_override:
-        total_net_acres = float(slot_inputs["net_acres"].astype(float).sum())
-
         if total_net_acres == 0:
             acquisition_cost = 0.0
         else:
@@ -329,8 +327,8 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
 # -----------------------------
 # Slot financials
 # -----------------------------
-def build_slot_financials(slot, deal_settings, type_curve_library, global_assumptions):
-    slot = calc_slot_metrics(slot, deal_settings)
+def build_slot_financials(slot, deal_settings, type_curve_library, global_assumptions, total_net_acres):
+    slot = calc_slot_metrics(slot, deal_settings, total_net_acres)
 
     slot_ngl = build_slot_ngl_factors(
         slot=slot,
@@ -442,7 +440,8 @@ def align_to_financial_calendar(slot_df, effective_date, months=360):
 # -----------------------------
 def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, global_assumptions):
     slot_results = []
-
+    total_net_acres = pd.to_numeric(slot_inputs["net_acres"], errors="coerce").fillna(0).sum()
+    
     for _, slot_row in slot_inputs.iterrows():
         slot_df = build_slot_financials(
             slot=slot_row,
@@ -457,7 +456,7 @@ def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, gl
             months=360,
         )
 
-        slot_calc = calc_slot_metrics(slot_row, deal_settings)
+        slot_calc = calc_slot_metrics(slot_row, deal_settings, total_net_acres)
         effective_date = pd.to_datetime(deal_settings["effective_date"])
 
         slot_df["slot_asset_purchase"] = 0.0
