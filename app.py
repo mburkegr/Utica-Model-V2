@@ -129,6 +129,7 @@ results_display = results_df.rename(columns={
     "net_revenue": "Net Revenue",
     "acquisition_cost": "Acquisition Cost",
     "gross_capex": "Gross Capex",
+    "slot_id": "Slot"
 })
 
 st.dataframe(results_display, use_container_width=True)
