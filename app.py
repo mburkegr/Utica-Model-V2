@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
+from datetime import date
+
 from model import run_deal_model
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
-
 st.title("Utica Deal Model")
 
 
@@ -13,7 +14,15 @@ st.title("Utica Deal Model")
 @st.cache_data
 def load_tc_names():
     tc_metadata = pd.read_excel("type_curve_library.xlsx", sheet_name="tc_metadata")
+    tc_metadata["tc_name"] = tc_metadata["tc_name"].astype(str).str.strip()
     return tc_metadata["tc_name"].dropna().unique().tolist()
+
+
+def next_month_start():
+    today = date.today()
+    if today.month == 12:
+        return date(today.year + 1, 1, 1)
+    return date(today.year, today.month + 1, 1)
 
 
 def build_slot_template(num_slots):
@@ -22,14 +31,26 @@ def build_slot_template(num_slots):
         rows.append({
             "slot_id": i,
             "tc_name": "Choose TC",
-            "lateral_length": 10000,
             "gross_wells": 2.0,
             "net_acres": 28.6,
-            "bid_per_acre": 8000.0,
             "unit_acres": 800.0,
+            "use_calc_unit_acres": False,
             "pct_unitized": 0.90,
+            "drilling_spud_month": next_month_start(),
+            "flowback_delay": 4,
             "net_revenue_interest": 0.80,
-            "dc_cost_per_ft": 750.0,
+            "lateral_length": 10000,
+            "dc_costs": 750.0,
+            "tc_risk": 1.00,
+            "bid_per_acre": 8000.0,
+            "oil_diff": -10.00,
+            "gas_diff": -3.00,
+            "ngl_diff": 0.00,
+            "oil_opex_bbl": 1.78,
+            "gas_opex_mcf": 0.04,
+            "ngl_opex": 2.50,
+            "fixed_loe": 3534.0,
+            "ngl_yield": 5.2,
         })
     return pd.DataFrame(rows)
 
@@ -39,25 +60,13 @@ def resize_slot_df(existing_df, target_slots):
     current_slots = len(existing_df)
 
     if current_slots == target_slots:
+        existing_df["slot_id"] = range(1, target_slots + 1)
         return existing_df
 
     if current_slots < target_slots:
-        new_rows = []
-        for i in range(current_slots + 1, target_slots + 1):
-            new_rows.append({
-                "slot_id": i,
-                "tc_name": "Choose TC",
-                "lateral_length": 10000,
-                "gross_wells": 2.0,
-                "net_acres": 28.6,
-                "bid_per_acre": 8000.0,
-                "unit_acres": 800.0,
-                "pct_unitized": 0.90,
-                "net_revenue_interest": 0.80,
-                "dc_cost_per_ft": 750.0,
-            })
-        if new_rows:
-            existing_df = pd.concat([existing_df, pd.DataFrame(new_rows)], ignore_index=True)
+        new_rows = build_slot_template(target_slots).iloc[current_slots:].copy()
+        existing_df = pd.concat([existing_df, new_rows], ignore_index=True)
+        existing_df["slot_id"] = range(1, target_slots + 1)
         return existing_df
 
     trimmed_df = existing_df.iloc[:target_slots].copy().reset_index(drop=True)
@@ -74,6 +83,9 @@ if "slot_df" not in st.session_state:
 if "deal_df" not in st.session_state:
     st.session_state["deal_df"] = None
 
+if "all_slots_df" not in st.session_state:
+    st.session_state["all_slots_df"] = None
+
 if "irr" not in st.session_state:
     st.session_state["irr"] = None
 
@@ -85,13 +97,117 @@ if "model_has_run" not in st.session_state:
 
 
 # -----------------------------
-# Deal-level inputs
+# Sidebar deal inputs
 # -----------------------------
 st.sidebar.header("Deal-Level Inputs")
 
+st.sidebar.subheader("Timing")
+effective_date = st.sidebar.date_input("Effective Date", value=next_month_start())
+
+st.sidebar.subheader("Pricing")
+oil_price = st.sidebar.number_input("Oil Price ($/bbl)", value=60.0, step=1.0)
+gas_price = st.sidebar.number_input("Gas Price ($/mcf)", value=3.75, step=0.05)
+
+st.sidebar.subheader("Overrides")
+use_dc_override = st.sidebar.checkbox("Use D&C Override for All Slots", value=False)
+dc_override = st.sidebar.number_input("D&C Override ($/ft)", value=750.0, step=25.0, disabled=not use_dc_override)
+
+use_bid_override = st.sidebar.checkbox("Use $/Acre Override for All Slots", value=False)
+bid_override = st.sidebar.number_input("$/Acre Override", value=8000.0, step=250.0, disabled=not use_bid_override)
+
+st.sidebar.subheader("Taxes")
+oil_sev_tax = st.sidebar.number_input("Oil Severance Tax ($/bbl)", value=0.10, step=0.01, format="%.3f")
+gas_sev_tax = st.sidebar.number_input("Gas Severance Tax ($/mcf)", value=0.025, step=0.005, format="%.3f")
+ad_val_tax = st.sidebar.number_input("Ad Valorem Tax (% of Net Revenue)", value=0.025, step=0.005, format="%.3f")
+
+st.sidebar.subheader("Ethane / NGL")
+ethane_rec = st.sidebar.checkbox("Recover Ethane", value=True)
+
+with st.sidebar.expander("Content Percentages", expanded=False):
+    content_ethane = st.number_input("Ethane Content %", value=0.50, step=0.01, format="%.3f")
+    content_propane = st.number_input("Propane Content %", value=0.25, step=0.01, format="%.3f")
+    content_isobutane = st.number_input("Isobutane Content %", value=0.065, step=0.005, format="%.3f")
+    content_butane = st.number_input("Butane Content %", value=0.065, step=0.005, format="%.3f")
+    content_pentanes = st.number_input("Pentanes Content %", value=0.12, step=0.01, format="%.3f")
+
+with st.sidebar.expander("Recover Ethane Percentages", expanded=False):
+    rec_ethane = st.number_input("Recover Ethane %", value=0.90, step=0.01, format="%.3f")
+    rec_propane = st.number_input("Recover Propane %", value=0.98, step=0.01, format="%.3f")
+    rec_isobutane = st.number_input("Recover Isobutane %", value=0.99, step=0.01, format="%.3f")
+    rec_butane = st.number_input("Recover Butane %", value=0.99, step=0.01, format="%.3f")
+    rec_pentanes = st.number_input("Recover Pentanes %", value=0.995, step=0.001, format="%.3f")
+
+with st.sidebar.expander("Reject Ethane Percentages", expanded=False):
+    rej_ethane = st.number_input("Reject Ethane %", value=0.20, step=0.01, format="%.3f")
+    rej_propane = st.number_input("Reject Propane %", value=0.90, step=0.01, format="%.3f")
+    rej_isobutane = st.number_input("Reject Isobutane %", value=0.98, step=0.01, format="%.3f")
+    rej_butane = st.number_input("Reject Butane %", value=0.98, step=0.01, format="%.3f")
+    rej_pentanes = st.number_input("Reject Pentanes %", value=0.995, step=0.001, format="%.3f")
+
+with st.sidebar.expander("NGL Shrink Factors", expanded=False):
+    shrink_ethane = st.number_input("Ethane Shrink", value=0.06634, step=0.001, format="%.5f")
+    shrink_propane = st.number_input("Propane Shrink", value=0.091563, step=0.001, format="%.5f")
+    shrink_isobutane = st.number_input("Isobutane Shrink", value=0.09963, step=0.001, format="%.5f")
+    shrink_butane = st.number_input("Butane Shrink", value=0.103744, step=0.001, format="%.5f")
+    shrink_pentanes = st.number_input("Pentanes Shrink", value=0.10968, step=0.001, format="%.5f")
+
+with st.sidebar.expander("NGL Component Prices", expanded=False):
+    price_ethane = st.number_input("Ethane Price", value=0.27, step=0.01, format="%.5f")
+    price_propane = st.number_input("Propane Price", value=0.64625, step=0.01, format="%.5f")
+    price_isobutane = st.number_input("Isobutane Price", value=0.84, step=0.01, format="%.5f")
+    price_butane = st.number_input("Butane Price", value=0.7825, step=0.01, format="%.5f")
+    price_pentanes = st.number_input("Pentanes Price", value=1.22125, step=0.01, format="%.5f")
+
+st.sidebar.subheader("Dale Promote")
+promote_enabled = st.sidebar.checkbox("Dale Promote On", value=False)
+acreage_carry = st.sidebar.number_input("Acreage Carry", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
+through_first_well_carry = st.sidebar.number_input("Through First Well Carry", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
+promote_rate = st.sidebar.number_input("Promote", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
+promote_multiple = st.sidebar.number_input("Promote Multiple", value=1.00, step=0.05, format="%.2f", disabled=not promote_enabled)
+
 deal_inputs = {
-    "oil_price": st.sidebar.number_input("Oil Price ($/bbl)", value=70.0),
-    "gas_price": st.sidebar.number_input("Gas Price ($/mcf)", value=3.75),
+    "effective_date": effective_date,
+    "oil_price": oil_price,
+    "gas_price": gas_price,
+    "use_dc_override": use_dc_override,
+    "dc_override": dc_override,
+    "use_bid_override": use_bid_override,
+    "bid_override": bid_override,
+    "oil_sev_tax": oil_sev_tax,
+    "gas_sev_tax": gas_sev_tax,
+    "ad_val_tax": ad_val_tax,
+    "ethane_rec": ethane_rec,
+    "content_ethane": content_ethane,
+    "content_propane": content_propane,
+    "content_isobutane": content_isobutane,
+    "content_butane": content_butane,
+    "content_pentanes": content_pentanes,
+    "rec_ethane": rec_ethane,
+    "rec_propane": rec_propane,
+    "rec_isobutane": rec_isobutane,
+    "rec_butane": rec_butane,
+    "rec_pentanes": rec_pentanes,
+    "rej_ethane": rej_ethane,
+    "rej_propane": rej_propane,
+    "rej_isobutane": rej_isobutane,
+    "rej_butane": rej_butane,
+    "rej_pentanes": rej_pentanes,
+    "shrink_ethane": shrink_ethane,
+    "shrink_propane": shrink_propane,
+    "shrink_isobutane": shrink_isobutane,
+    "shrink_butane": shrink_butane,
+    "shrink_pentanes": shrink_pentanes,
+    "price_ethane": price_ethane,
+    "price_propane": price_propane,
+    "price_isobutane": price_isobutane,
+    "price_butane": price_butane,
+    "price_pentanes": price_pentanes,
+    "promote_enabled": promote_enabled,
+    "acreage_carry": acreage_carry if promote_enabled else 0.0,
+    "through_first_well_carry": through_first_well_carry if promote_enabled else 0.0,
+    "promote_rate": promote_rate if promote_enabled else 0.0,
+    "promote_multiple": promote_multiple if promote_enabled else 0.0,
+    "promote_irr_threshold": acreage_carry if promote_enabled else 0.0,
 }
 
 
@@ -105,7 +221,12 @@ tc_names = ["Choose TC"] + load_tc_names()
 col_a, col_b, col_c = st.columns([1, 1, 1])
 
 with col_a:
-    num_slots = st.number_input("Number of Slots", min_value=1, value=len(st.session_state["slot_df"]), step=1)
+    num_slots = st.number_input(
+        "Number of Slots",
+        min_value=1,
+        value=len(st.session_state["slot_df"]),
+        step=1,
+    )
 
 with col_b:
     if st.button("Load Slots"):
@@ -116,9 +237,6 @@ with col_c:
     run_model_clicked = st.button("Run Model")
 
 
-# -----------------------------
-# Editable slot table
-# -----------------------------
 slot_df = st.data_editor(
     st.session_state["slot_df"],
     num_rows="fixed",
@@ -126,46 +244,36 @@ slot_df = st.data_editor(
     key="slot_editor",
     column_config={
         "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
-        "tc_name": st.column_config.SelectboxColumn(
-            "Type Curve",
-            options=tc_names,
-            required=True,
-        ),
-        "lateral_length": st.column_config.NumberColumn("Lateral Length (ft)", format="%,d"),
+        "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
         "gross_wells": st.column_config.NumberColumn("Gross Wells", format="%.2f"),
         "net_acres": st.column_config.NumberColumn("Net Acres", format="%,.1f"),
-        "bid_per_acre": st.column_config.NumberColumn("$/Acre Bid", format="$%,d"),
         "unit_acres": st.column_config.NumberColumn("Unit Acres", format="%,.0f"),
+        "use_calc_unit_acres": st.column_config.CheckboxColumn("Calc Unit Acres"),
         "pct_unitized": st.column_config.NumberColumn("% Unitized", format="%.2f"),
+        "drilling_spud_month": st.column_config.DateColumn("Spud Month", format="YYYY-MM-DD"),
+        "flowback_delay": st.column_config.NumberColumn("Flowback Delay", format="%d"),
         "net_revenue_interest": st.column_config.NumberColumn("NRI", format="%.2f"),
-        "dc_cost_per_ft": st.column_config.NumberColumn("D&C ($/ft)", format="$%,.0f"),
-    }
+        "lateral_length": st.column_config.NumberColumn("Lateral Length (ft)", format="%,d"),
+        "dc_costs": st.column_config.NumberColumn("D&C ($/ft)", format="$%,.0f"),
+        "tc_risk": st.column_config.NumberColumn("TC Risk", format="%.2f"),
+        "bid_per_acre": st.column_config.NumberColumn("$/Acre Bid", format="$%,d"),
+        "oil_diff": st.column_config.NumberColumn("Oil Diff", format="$%.2f"),
+        "gas_diff": st.column_config.NumberColumn("Gas Diff", format="$%.2f"),
+        "ngl_diff": st.column_config.NumberColumn("NGL Diff", format="$%.2f"),
+        "oil_opex_bbl": st.column_config.NumberColumn("Oil Opex", format="$%.2f"),
+        "gas_opex_mcf": st.column_config.NumberColumn("Gas Opex", format="$%.2f"),
+        "ngl_opex": st.column_config.NumberColumn("NGL Opex", format="$%.2f"),
+        "fixed_loe": st.column_config.NumberColumn("Fixed LOE", format="$%,.0f"),
+        "ngl_yield": st.column_config.NumberColumn("NGL Yield", format="%.2f"),
+    },
 ).copy()
 
-default_values = {
-    "slot_id": 0,
-    "tc_name": "Choose TC",
-    "lateral_length": 10000,
-    "gross_wells": 2.0,
-    "net_acres": 28.6,
-    "bid_per_acre": 8000.0,
-    "unit_acres": 800.0,
-    "pct_unitized": 0.90,
-    "net_revenue_interest": 0.80,
-    "dc_cost_per_ft": 750.0,
-}
-
-for col, default_val in default_values.items():
-    if col in slot_df.columns:
-        slot_df[col] = slot_df[col].fillna(default_val)
-
 slot_df["slot_id"] = range(1, len(slot_df) + 1)
-
 st.session_state["slot_df"] = slot_df
 
 
 # -----------------------------
-# Run model only when button clicked
+# Run only on button
 # -----------------------------
 if run_model_clicked:
     if (slot_df["tc_name"] == "Choose TC").any():
@@ -173,6 +281,7 @@ if run_model_clicked:
         st.session_state["model_has_run"] = False
     else:
         all_slots_df, deal_df, irr, moic = run_deal_model(slot_df, deal_inputs)
+        st.session_state["all_slots_df"] = all_slots_df
         st.session_state["deal_df"] = deal_df
         st.session_state["irr"] = irr
         st.session_state["moic"] = moic
@@ -180,9 +289,10 @@ if run_model_clicked:
 
 
 # -----------------------------
-# Show results only after model run
+# Results
 # -----------------------------
 if st.session_state["model_has_run"] and st.session_state["deal_df"] is not None:
+    all_slots_df = st.session_state["all_slots_df"]
     deal_df = st.session_state["deal_df"]
     irr = st.session_state["irr"]
     moic = st.session_state["moic"]
@@ -190,44 +300,67 @@ if st.session_state["model_has_run"] and st.session_state["deal_df"] is not None
     st.subheader("Deal Summary")
 
     total_net_acres = slot_df["net_acres"].sum()
-    total_acquisition = (slot_df["net_acres"] * slot_df["bid_per_acre"]).sum()
-    blended_bid = total_acquisition / total_net_acres if total_net_acres > 0 else 0
+
+    if deal_inputs["use_bid_override"]:
+        total_acquisition = total_net_acres * deal_inputs["bid_override"]
+    else:
+        total_acquisition = (slot_df["net_acres"] * slot_df["bid_per_acre"]).sum()
+
+    blended_bid = total_acquisition / total_net_acres if total_net_acres > 0 else 0.0
 
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric("Total Net Acres", f"{total_net_acres:,.1f}")
-
     with col2:
         st.metric("Acquisition Price", f"${total_acquisition:,.0f}")
-
     with col3:
         st.metric("$/Acre Bid", f"${blended_bid:,.0f}")
-
     with col4:
         st.metric("IRR", f"{irr:.1%}" if irr is not None else "N/A")
-
     with col5:
         st.metric("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
 
     st.subheader("Monthly Deal Cash Flow")
-
     st.dataframe(
         deal_df.style.format({
-            "oil": "{:,.0f}",
-            "gas": "{:,.0f}",
-            "ngl": "{:,.0f}",
-            "oil_rev": "${:,.0f}",
-            "gas_rev": "${:,.0f}",
-            "ngl_rev": "${:,.0f}",
-            "total_revenue": "${:,.0f}",
-            "loe": "${:,.0f}",
-            "tax": "${:,.0f}",
-            "total_cost": "${:,.0f}",
-            "cash_flow": "${:,.0f}",
+            "slot_gross_oil_production": "{:,.0f}",
+            "slot_gross_gas_production": "{:,.0f}",
+            "slot_gross_ngl_production": "{:,.0f}",
+            "slot_net_oil_production": "{:,.0f}",
+            "slot_net_gas_production": "{:,.0f}",
+            "slot_net_ngl_production": "{:,.0f}",
+            "slot_oil_revenue": "${:,.0f}",
+            "slot_gas_revenue": "${:,.0f}",
+            "slot_ngl_revenue": "${:,.0f}",
+            "slot_total_revenue": "${:,.0f}",
+            "slot_loe": "${:,.0f}",
+            "slot_tax": "${:,.0f}",
+            "slot_operating_profit": "${:,.0f}",
+            "slot_capex": "${:,.0f}",
+            "slot_pud_cash_flow": "${:,.0f}",
+            "slot_asset_purchase": "${:,.0f}",
+            "slot_promote": "${:,.0f}",
+            "slot_total_cash_flow": "${:,.0f}",
         }),
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
     )
+
+    with st.expander("Slot-Level Monthly Detail", expanded=False):
+        st.dataframe(
+            all_slots_df.style.format({
+                "slot_total_revenue": "${:,.0f}",
+                "slot_loe": "${:,.0f}",
+                "slot_tax": "${:,.0f}",
+                "slot_capex": "${:,.0f}",
+                "slot_pud_cash_flow": "${:,.0f}",
+                "slot_asset_purchase": "${:,.0f}",
+                "slot_promote": "${:,.0f}",
+                "slot_total_cash_flow": "${:,.0f}",
+            }),
+            use_container_width=True,
+            hide_index=True,
+        )
 else:
-    st.info("Set your slot inputs and click Run Model.")
+    st.info("Set your deal assumptions and slot inputs, then click Run Model.")
