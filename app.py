@@ -7,6 +7,7 @@ from model import run_deal_model
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
 st.title("Utica Deal Model")
 
+from io import BytesIO
 
 # -----------------------------
 # Helpers
