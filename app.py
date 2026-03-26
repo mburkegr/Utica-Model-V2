@@ -8,7 +8,7 @@ def load_tc_names():
     tc_metadata = pd.read_excel("type_curve_library.xlsx", sheet_name="tc_metadata")
     return tc_metadata["tc_name"].unique().tolist()
 
-tc_names = load_tc_names()
+tc_names = ["Choose TC"] + load_tc_names()
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
 
