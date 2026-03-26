@@ -17,52 +17,57 @@ deal_inputs = {
 }
 
 # -----------------------------
-# Slot table input
+# Slot template builder
+# -----------------------------
+def build_slot_template(num_slots):
+    rows = []
+    for i in range(1, num_slots + 1):
+        rows.append({
+            "slot_id": i,
+            "lateral_length": 10000,
+            "gross_wells": 2.0,
+            "net_acres": 28.6,
+            "bid_per_acre": 8000.0,
+            "unit_acres": 800.0,
+            "pct_unitized": 0.90,
+            "net_revenue_interest": 0.80,
+            "dc_cost_per_ft": 750.0,
+        })
+    return pd.DataFrame(rows)
+
+# -----------------------------
+# Slot loader controls
 # -----------------------------
 st.header("Slot Inputs")
 
-default_slots = pd.DataFrame([
-    {
-        "slot_id": 1,
-        "lateral_length": 7000,
-        "gross_wells": 2.0,
-        "net_acres": 28.6,
-        "bid_per_acre": 8000.0,
-        "unit_acres": 800.0,
-        "pct_unitized": 0.90,
-        "net_revenue_interest": 0.80,
-        "dc_cost_per_ft": 750.0,
-    },
-    {
-        "slot_id": 2,
-        "lateral_length": 10000,
-        "gross_wells": 2.0,
-        "net_acres": 28.6,
-        "bid_per_acre": 8000.0,
-        "unit_acres": 800.0,
-        "pct_unitized": 0.90,
-        "net_revenue_interest": 0.80,
-        "dc_cost_per_ft": 750.0,
-    }
-])
+col_a, col_b = st.columns([1, 1])
+
+with col_a:
+    num_slots = st.number_input("Number of Slots", min_value=1, value=2, step=1)
+
+with col_b:
+    if st.button("Load Slots"):
+        st.session_state["slot_df"] = build_slot_template(num_slots)
+
+# initialize once
+if "slot_df" not in st.session_state:
+    st.session_state["slot_df"] = build_slot_template(2)
 
 slot_df = st.data_editor(
-    default_slots,
+    st.session_state["slot_df"],
     num_rows="dynamic",
-    use_container_width=True
+    use_container_width=True,
+    key="slot_editor"
 )
 
-# -----------------------------
-# Clean / fill blank rows
-# -----------------------------
 slot_df = slot_df.copy()
 
 default_values = {
     "slot_id": 0,
     "lateral_length": 10000,
-    "gross_wells": 0.0,
-    "net_acres": 0.0,
-    "bid_per_acre": 0.0,
+    "gross_wells": 2.0,
+    "net_acres": 28.6,
+    "bid_per_acre": 8000.0,
     "unit_acres": 800.0,
     "pct_unitized": 0.90,
     "net_revenue_interest": 0.80,
@@ -73,8 +78,7 @@ for col, default_val in default_values.items():
     if col in slot_df.columns:
         slot_df[col] = slot_df[col].fillna(default_val)
 
-# optional: drop fully blank rows if any sneak in
-slot_df = slot_df.dropna(how="all")
+st.session_state["slot_df"] = slot_df
 
 # -----------------------------
 # Run model for each slot
@@ -98,7 +102,6 @@ for _, row in slot_df.iterrows():
 
     result = run_deal_model(slot_inputs)
     result["slot_id"] = row["slot_id"]
-
     results_list.append(result)
 
 results_df = pd.DataFrame(results_list)
@@ -107,7 +110,7 @@ results_df = pd.DataFrame(results_list)
 # Slot-level results
 # -----------------------------
 st.subheader("Slot-Level Results")
-st.dataframe(results_df, use_container_width=True)
+st.dataframe(results_df, use_container_width=True, hide_index=True)
 
 # -----------------------------
 # Deal rollup
