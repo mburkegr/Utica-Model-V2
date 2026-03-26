@@ -168,7 +168,7 @@ def run_deal_model(slot_df, deal_inputs):
         spud_date = pd.to_datetime("2027-01-01")
 
         slot_cf = build_slot_cashflow(
-            tc_name="chestnut_farms",
+            tc_name=row["tc_name"],
             lateral_length=row["lateral_length"],
             spud_date=spud_date,
             flowback_delay=4,
