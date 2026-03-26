@@ -331,7 +331,7 @@ if run_model_clicked:
             st.dataframe(slot_audit_display_df)
         
             st.download_button(
-                "Download Audit Excel",
+                "Download in Excel",
                 audit_excel_data,
                 file_name="deal_audit.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
