@@ -291,7 +291,11 @@ if run_model_clicked:
 # -----------------------------
 # Results
 # -----------------------------
-if st.session_state["model_has_run"] and st.session_state["deal_df"] is not None:
+if (
+    st.session_state["model_has_run"]
+    and st.session_state["deal_df"] is not None
+    and st.session_state["all_slots_df"] is not None
+):
     all_slots_df = st.session_state["all_slots_df"]
     deal_df = st.session_state["deal_df"]
     irr = st.session_state["irr"]
