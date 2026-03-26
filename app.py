@@ -259,12 +259,15 @@ tc_names = ["Choose TC"] + load_tc_names()
 col_a, col_b, col_c = st.columns([1, 1, 1])
 
 with col_a:
-    num_slots = st.number_input(
-        "Number of Slots",
-        min_value=1,
-        value=len(st.session_state["slot_df"]),
-        step=1,
-    )
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        num_slots = st.number_input("Number of Slots", min_value=1, step=1, value=1)
+    
+    with col2:
+        st.write("")
+        st.write("")
+        load_slots_clicked = st.button("Load Slots")
 
 with col_b:
     if st.button("Load Slots"):
