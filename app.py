@@ -327,7 +327,7 @@ if run_model_clicked:
         slot_audit_display_df = format_display_df(slot_audit_df)
         audit_excel_data = to_excel_bytes(deal_audit_df, slot_audit_df)
         
-        with st.expander("Deal Monthly Audit", expanded=False):
+        with st.expander("Monthly Data Detail", expanded=False):
         
             st.subheader("Total Deal Monthly Data")
             st.dataframe(deal_audit_display_df)
