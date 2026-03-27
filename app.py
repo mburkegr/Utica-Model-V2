@@ -13,7 +13,28 @@ from io import BytesIO
 # Helpers
 # -----------------------------
 def pretty_column_name(col):
-    return col.replace("_", " ").title()
+    name_map = {
+        "date": "Date",
+        "slot_id": "Slot ID",
+        "tc_name": "Type Curve",
+        "net_oil": "Net Oil Production",
+        "net_gas": "Net Gas Production",
+        "net_ngl": "Net NGL Production",
+        "net_oil_revenue": "Net Oil Revenue",
+        "net_gas_revenue": "Net Gas Revenue",
+        "net_ngl_revenue": "Net NGL Revenue",
+        "total_revenue": "Total Revenue",
+        "total_loe": "Total LOE",
+        "total_tax": "Total Tax",
+        "operating_profit": "Operating Profit",
+        "capex": "Capex",
+        "acquisition": "Acquisition",
+        "promote": "Promote",
+        "total_cash_flow": "Total Cash Flow",
+        "cum_total_cash_flow": "Cumulative Total Cash Flow",
+    }
+
+    return name_map.get(col, col.replace("_", " ").title())
 
 
 def format_display_df(df):
