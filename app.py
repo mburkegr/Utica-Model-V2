@@ -508,26 +508,6 @@ if run_model_clicked:
 # -----------------------------
 # Results
 # -----------------------------
-if (
-    st.session_state["model_has_run"]
-    and st.session_state["deal_df"] is not None
-    and st.session_state["all_slots_df"] is not None
-):
-    all_slots_df = st.session_state["all_slots_df"]
-    deal_df = st.session_state["deal_df"]
-    irr = st.session_state["irr"]
-    moic = st.session_state["moic"]
-    deal_audit_df = st.session_state["deal_audit_df"]
-    slot_audit_df = st.session_state["slot_audit_df"]
-
-
-    deal_display_df = deal_audit_df[
-        [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
-    ].copy()
-
-    slot_display_df = slot_audit_df[
-        [col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]
-    ].copy()
 
     DEAL_DISPLAY_COLS = [
         "date",
@@ -568,7 +548,19 @@ if (
         "slot_total_cash_flow",
         "cum_total_cf",
     ]
-    
+
+if (
+    st.session_state["model_has_run"]
+    and st.session_state["deal_df"] is not None
+    and st.session_state["all_slots_df"] is not None
+):
+    all_slots_df = st.session_state["all_slots_df"]
+    deal_df = st.session_state["deal_df"]
+    irr = st.session_state["irr"]
+    moic = st.session_state["moic"]
+    deal_audit_df = st.session_state["deal_audit_df"]
+    slot_audit_df = st.session_state["slot_audit_df"]
+
     deal_display_df = deal_audit_df[
         [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
     ].copy()
