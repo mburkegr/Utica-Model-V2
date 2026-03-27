@@ -405,7 +405,10 @@ if (
     moic = st.session_state["moic"]
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
-
+    
+    st.write("Deal audit columns:", list(deal_audit_df.columns))
+    st.write("Slot audit columns:", list(slot_audit_df.columns))
+    
     DEAL_DISPLAY_COLS = [
         "date",
         "net_oil",
