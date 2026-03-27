@@ -464,12 +464,15 @@ def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, gl
         effective_date = pd.to_datetime(deal_settings["effective_date"])
 
         slot_df["slot_asset_purchase"] = 0.0
-        mask = (
-            (slot_df["date"].dt.year == effective_date.year)
-            & (slot_df["date"].dt.month == effective_date.month)
-        )
-        slot_df.loc[mask, "slot_asset_purchase"] = -float(slot_calc["acquisition_cost"])
 
+        # Only apply acquisition ONCE (first slot only)
+        if slot_row.name == 0:  # first slot only
+            mask = (
+                (slot_df["date"].dt.year == effective_date.year)
+                & (slot_df["date"].dt.month == effective_date.month)
+            )
+
+    slot_df.loc[mask, "slot_asset_purchase"] = -float(slot_calc["acquisition_cost"])
         if "slot_promote" not in slot_df.columns:
             slot_df["slot_promote"] = 0.0
 
