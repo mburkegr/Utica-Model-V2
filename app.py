@@ -376,6 +376,7 @@ if (
             audit_excel_data,
             file_name="deal_audit.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            key="monthly_data_download_excel"
         )
 
     st.subheader("Deal Summary")
