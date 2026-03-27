@@ -419,18 +419,21 @@ def align_to_financial_calendar(slot_df, effective_date, months=360):
     calendar = pd.DataFrame({
         "date": pd.date_range(start=effective_date, periods=months, freq="MS")
     })
-
+    
     df = calendar.merge(slot_df, on="date", how="left")
-
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    
+    numeric_cols = [col for col in df.select_dtypes(include=[np.number]).columns if col != "slot_id"]
     df[numeric_cols] = df[numeric_cols].fillna(0)
-
+    
     object_cols = df.select_dtypes(include=["object"]).columns
     for col in object_cols:
         if col == "tc_name":
             df[col] = df[col].fillna(slot_df["tc_name"].iloc[0] if "tc_name" in slot_df.columns else "")
         elif col == "ngl_recovery_case":
             df[col] = df[col].fillna(slot_df["ngl_recovery_case"].iloc[0] if "ngl_recovery_case" in slot_df.columns else "")
+    
+    if "slot_id" in slot_df.columns:
+        df["slot_id"] = slot_df["slot_id"].iloc[0]
 
     return df
 
