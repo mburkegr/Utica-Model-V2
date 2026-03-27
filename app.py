@@ -99,6 +99,16 @@ def to_excel_bytes(deal_df, slot_df):
         slot_df.to_excel(writer, index=False, sheet_name="Slot Audit")
     output.seek(0)
     return output.getvalue()
+
+def apply_calc_unit_acres(df):
+    df = df.copy()
+    mask = df["use_calc_unit_acres"].fillna(False)
+
+    df.loc[mask, "unit_acres"] = (
+        df.loc[mask, "lateral_length"] * df.loc[mask, "net_acres"] / 50.0
+    )
+
+    return df
 # -----------------------------
 # Session state init
 # -----------------------------
@@ -270,6 +280,9 @@ if load_slots_clicked:
     st.session_state["slot_df"] = resize_slot_df(st.session_state["slot_df"], num_slots)
     st.session_state["model_has_run"] = False
 
+# Apply calc before display
+st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"])
+
 slot_df_display = st.session_state["slot_df"]
 
 slot_df = st.data_editor(
@@ -303,9 +316,39 @@ slot_df = st.data_editor(
     },
 ).copy()
 
-st.session_state["slot_df"] = slot_df
-
+# Run button FIRST
 run_model_clicked = st.button("Run Model")
+
+# Apply calc after edit
+slot_df = apply_calc_unit_acres(slot_df)
+
+# Only rerun if something changed
+if not slot_df.equals(st.session_state["slot_df"]):
+    st.session_state["slot_df"] = slot_df
+    st.rerun()
+else:
+    st.session_state["slot_df"] = slot_df
+
+# Then use button
+if run_model_clicked:
+    st.session_state["slot_df"] = slot_df  # save latest edits
+
+    if (slot_df["tc_name"] == "Choose TC").any():
+        st.warning("Please select a Type Curve for all slots before running the model.")
+        st.session_state["model_has_run"] = False
+    else:
+        all_slots_df, deal_df, slot_audit_df, deal_audit_df, irr, moic = run_deal_model(
+            slot_df,
+            deal_inputs
+        )
+
+        st.session_state["all_slots_df"] = all_slots_df
+        st.session_state["deal_df"] = deal_df
+        st.session_state["slot_audit_df"] = slot_audit_df
+        st.session_state["deal_audit_df"] = deal_audit_df
+        st.session_state["irr"] = irr
+        st.session_state["moic"] = moic
+        st.session_state["model_has_run"] = True
 
 if run_model_clicked:
     st.session_state["slot_df"] = slot_df  # save latest edits
