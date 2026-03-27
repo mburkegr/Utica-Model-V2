@@ -133,6 +133,59 @@ def apply_calc_unit_acres(df):
     )
 
     return df
+
+def build_sensitivity_range(base_value, step, steps_each_way=3):
+    return [base_value + step * i for i in range(-steps_each_way, steps_each_way + 1)]
+
+
+def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
+    dc_values = build_sensitivity_range(base_dc, 50.0, 3)
+    bid_values = build_sensitivity_range(base_bid, 500.0, 3)
+
+    irr_table = pd.DataFrame(index=dc_values, columns=bid_values, dtype=float)
+    moic_table = pd.DataFrame(index=dc_values, columns=bid_values, dtype=float)
+
+    for dc in dc_values:
+        for bid in bid_values:
+            sens_deal_inputs = deal_inputs.copy()
+            sens_deal_inputs["use_dc_override"] = True
+            sens_deal_inputs["dc_override"] = float(dc)
+            sens_deal_inputs["use_bid_override"] = True
+            sens_deal_inputs["bid_override"] = float(bid)
+
+            try:
+                _, _, _, _, irr, moic = run_deal_model(slot_df.copy(), sens_deal_inputs)
+                irr_table.loc[dc, bid] = irr
+                moic_table.loc[dc, bid] = moic
+            except Exception:
+                irr_table.loc[dc, bid] = None
+                moic_table.loc[dc, bid] = None
+
+    irr_table.index.name = "D&C $/ft"
+    irr_table.columns.name = "$/Acre Bid"
+
+    moic_table.index.name = "D&C $/ft"
+    moic_table.columns.name = "$/Acre Bid"
+
+    return irr_table, moic_table
+
+
+def format_irr_table(df):
+    formatted = df.copy()
+    for col in formatted.columns:
+        formatted[col] = formatted[col].map(
+            lambda x: f"{x:.2%}" if pd.notnull(x) else ""
+        )
+    return formatted
+
+
+def format_moic_table(df):
+    formatted = df.copy()
+    for col in formatted.columns:
+        formatted[col] = formatted[col].map(
+            lambda x: f"{x:.2f}x" if pd.notnull(x) else ""
+        )
+    return formatted
 # -----------------------------
 # Session state init
 # -----------------------------
@@ -549,6 +602,27 @@ if (
         st.metric("IRR", f"{irr:.1%}" if irr is not None else "N/A")
     with col5:
         st.metric("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
+    
+    st.subheader("Sensitivity Tables")
 
+    base_dc = deal_inputs["dc_override"] if deal_inputs["use_dc_override"] else float(slot_df["dc_costs"].mean())
+    base_bid = deal_inputs["bid_override"] if deal_inputs["use_bid_override"] else float(slot_df["bid_per_acre"].mean())
+
+    irr_sens_df, moic_sens_df = run_bid_dc_sensitivity(
+        slot_df=slot_df,
+        deal_inputs=deal_inputs,
+        base_dc=base_dc,
+        base_bid=base_bid,
+    )
+
+    irr_sens_display = format_irr_table(irr_sens_df)
+    moic_sens_display = format_moic_table(moic_sens_df)
+
+    with st.expander("$/Acre Bid vs D&C $/ft Sensitivity", expanded=True):
+        st.markdown("**IRR Sensitivity**")
+        st.dataframe(irr_sens_display, use_container_width=True)
+
+        st.markdown("**MOIC Sensitivity**")
+        st.dataframe(moic_sens_display, use_container_width=True)
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
