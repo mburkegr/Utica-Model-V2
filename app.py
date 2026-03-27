@@ -406,46 +406,5 @@ if (
     with col5:
         st.metric("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
 
-    st.subheader("Monthly Deal Cash Flow")
-    st.dataframe(
-        deal_df.style.format({
-            "slot_gross_oil_production": "{:,.0f}",
-            "slot_gross_gas_production": "{:,.0f}",
-            "slot_gross_ngl_production": "{:,.0f}",
-            "slot_net_oil_production": "{:,.0f}",
-            "slot_net_gas_production": "{:,.0f}",
-            "slot_net_ngl_production": "{:,.0f}",
-            "slot_oil_revenue": "${:,.0f}",
-            "slot_gas_revenue": "${:,.0f}",
-            "slot_ngl_revenue": "${:,.0f}",
-            "slot_total_revenue": "${:,.0f}",
-            "slot_loe": "${:,.0f}",
-            "slot_tax": "${:,.0f}",
-            "slot_operating_profit": "${:,.0f}",
-            "slot_capex": "${:,.0f}",
-            "slot_pud_cash_flow": "${:,.0f}",
-            "slot_asset_purchase": "${:,.0f}",
-            "slot_promote": "${:,.0f}",
-            "slot_total_cash_flow": "${:,.0f}",
-        }),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    with st.expander("Slot-Level Monthly Detail", expanded=False):
-        st.dataframe(
-            all_slots_df.style.format({
-                "slot_total_revenue": "${:,.0f}",
-                "slot_loe": "${:,.0f}",
-                "slot_tax": "${:,.0f}",
-                "slot_capex": "${:,.0f}",
-                "slot_pud_cash_flow": "${:,.0f}",
-                "slot_asset_purchase": "${:,.0f}",
-                "slot_promote": "${:,.0f}",
-                "slot_total_cash_flow": "${:,.0f}",
-            }),
-            use_container_width=True,
-            hide_index=True,
-        )
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
