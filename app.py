@@ -105,7 +105,7 @@ def apply_calc_unit_acres(df):
     mask = df["use_calc_unit_acres"].fillna(False)
 
     df.loc[mask, "unit_acres"] = (
-        df.loc[mask, "lateral_length"] * df.loc[mask, "net_acres"] / 50.0
+        df.loc[mask, "lateral_length"] / 50.0 * df.loc[mask, "gross_wells"]
     )
 
     return df
