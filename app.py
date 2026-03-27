@@ -338,6 +338,8 @@ if run_model_clicked:
             )
         st.session_state["all_slots_df"] = all_slots_df
         st.session_state["deal_df"] = deal_df
+        st.session_state["slot_audit_df"] = slot_audit_df
+        st.session_state["deal_audit_df"] = deal_audit_df
         st.session_state["irr"] = irr
         st.session_state["moic"] = moic
         st.session_state["model_has_run"] = True
