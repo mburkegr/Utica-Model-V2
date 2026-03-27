@@ -217,17 +217,17 @@ def build_heatmap(df, title, value_format):
 
     fig = px.imshow(
         heatmap_df,
-        text_auto=value_format,
+        text_auto=value_format,   # ← MUST HAVE COMMA
         aspect="auto",
         labels={
             "x": "D&C Costs ($/ft)",
             "y": "$/Acre Bid",
             "color": title,
-        }
+        },
         title=title,
     )
 
-        fig.update_layout(
+    fig.update_layout(
         xaxis_title="D&C Costs ($/ft)",
         yaxis_title="$/Acre Bid",
     )
