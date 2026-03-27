@@ -472,7 +472,8 @@ def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, gl
                 & (slot_df["date"].dt.month == effective_date.month)
             )
 
-    slot_df.loc[mask, "slot_asset_purchase"] = -float(slot_calc["acquisition_cost"])
+        slot_df.loc[mask, "slot_asset_purchase"] = -float(slot_calc["acquisition_cost"])
+    
         if "slot_promote" not in slot_df.columns:
             slot_df["slot_promote"] = 0.0
 
