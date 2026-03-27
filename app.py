@@ -213,23 +213,37 @@ def format_moic_table(df):
     return formatted
 
 def build_heatmap(df, title, value_format):
-    heatmap_df = df.copy()
+    heatmap_df = df.T.copy()
 
     fig = px.imshow(
         heatmap_df,
         text_auto=value_format,
         aspect="auto",
         labels={
-            "x": "$/Acre Bid",
-            "y": "D&C Costs ($/ft)",
+            "x": "D&C Costs ($/ft)",
+            "y": "$/Acre Bid",
             "color": title,
-        },
+        }
         title=title,
     )
 
-    fig.update_layout(
-        xaxis_title="$/Acre Bid",
-        yaxis_title="D&C Costs ($/ft)",
+        fig.update_layout(
+        xaxis_title="D&C Costs ($/ft)",
+        yaxis_title="$/Acre Bid",
+    )
+
+    return fig
+def format_heatmap_axes(fig, df):
+    fig.update_xaxes(
+        tickmode="array",
+        tickvals=list(range(len(df.columns))),
+        ticktext=[f"${int(x):,}" for x in df.columns]
+    )
+
+    fig.update_yaxes(
+        tickmode="array",
+        tickvals=list(range(len(df.index))),
+        ticktext=[f"${int(x):,}" for x in df.index]
     )
 
     return fig
