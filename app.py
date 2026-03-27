@@ -200,39 +200,47 @@ def build_heatmap(df, title, metric="irr"):
     x_vals = [f"${int(x):,}" for x in heatmap_df.columns]   # D&C on top
     y_vals = [f"${int(x):,}" for x in heatmap_df.index]     # $/Acre on left
 
+    def clamp01(x):
+        return max(0.0, min(1.0, x))
+
     if metric == "irr":
         text_vals = heatmap_df.applymap(lambda x: f"{x:.2%}" if pd.notnull(x) else "")
         zmin = 0.0
         zmax = max(0.40, float(heatmap_df.max().max()))
 
-        # <15% red, 15-25% yellow, >25% green
+        low_cut = 0.15
+        high_cut = 0.25
+
+        low_norm = clamp01((low_cut - zmin) / (zmax - zmin)) if zmax > zmin else 0.33
+        high_norm = clamp01((high_cut - zmin) / (zmax - zmin)) if zmax > zmin else 0.66
+
         colorscale = [
             [0.00, "rgb(255,180,180)"],
-            [0.15 / zmax, "rgb(255,180,180)"],
-            [0.15 / zmax, "rgb(255,255,204)"],
-            [0.25 / zmax, "rgb(255,255,204)"],
-            [0.25 / zmax, "rgb(214,232,202)"],
+            [low_norm, "rgb(255,180,180)"],
+            [low_norm, "rgb(255,255,204)"],
+            [high_norm, "rgb(255,255,204)"],
+            [high_norm, "rgb(214,232,202)"],
             [1.00, "rgb(214,232,202)"],
         ]
         colorbar_title = "IRR"
 
     elif metric == "moic":
         text_vals = heatmap_df.applymap(lambda x: f"{x:.2f}x" if pd.notnull(x) else "")
-        zmin = float(heatmap_df.min().min())
-        zmax = float(heatmap_df.max().max())
+        zmin = min(0.0, float(heatmap_df.min().min()))
+        zmax = max(2.0, float(heatmap_df.max().max()))
 
-        # ASSUMED MOIC bands:
-        # <1.5x red, 1.5x-2.0x yellow, >2.0x green
-        # Change these two numbers if you want different cutoffs
-        low_cut = 1.50
-        high_cut = 2.00
+        low_cut = 1.00
+        high_cut = 1.50
+
+        low_norm = clamp01((low_cut - zmin) / (zmax - zmin)) if zmax > zmin else 0.33
+        high_norm = clamp01((high_cut - zmin) / (zmax - zmin)) if zmax > zmin else 0.66
 
         colorscale = [
             [0.00, "rgb(255,180,180)"],
-            [(low_cut - zmin) / (zmax - zmin) if zmax > zmin else 0.33, "rgb(255,180,180)"],
-            [(low_cut - zmin) / (zmax - zmin) if zmax > zmin else 0.33, "rgb(255,255,204)"],
-            [(high_cut - zmin) / (zmax - zmin) if zmax > zmin else 0.66, "rgb(255,255,204)"],
-            [(high_cut - zmin) / (zmax - zmin) if zmax > zmin else 0.66, "rgb(214,232,202)"],
+            [low_norm, "rgb(255,180,180)"],
+            [low_norm, "rgb(255,255,204)"],
+            [high_norm, "rgb(255,255,204)"],
+            [high_norm, "rgb(214,232,202)"],
             [1.00, "rgb(214,232,202)"],
         ]
         colorbar_title = "MOIC"
@@ -520,45 +528,45 @@ if run_model_clicked:
 # Results
 # -----------------------------
 
-    DEAL_DISPLAY_COLS = [
-        "date",
-        "slot_net_oil_production",
-        "slot_net_gas_production",
-        "slot_net_ngl_production",
-        "slot_oil_revenue",
-        "slot_gas_revenue",
-        "slot_ngl_revenue",
-        "slot_total_revenue",
-        "slot_loe",
-        "slot_tax",
-        "slot_operating_profit",
-        "slot_capex",
-        "slot_asset_purchase",
-        "slot_promote",
-        "slot_total_cash_flow",
-        "cum_total_cf",
-    ]
-    
-    SLOT_DISPLAY_COLS = [
-        "slot_id",
-        "tc_name",
-        "date",
-        "slot_net_oil_production",
-        "slot_net_gas_production",
-        "slot_net_ngl_production",
-        "slot_oil_revenue",
-        "slot_gas_revenue",
-        "slot_ngl_revenue",
-        "slot_total_revenue",
-        "slot_loe",
-        "slot_tax",
-        "slot_operating_profit",
-        "slot_capex",
-        "slot_asset_purchase",
-        "slot_promote",
-        "slot_total_cash_flow",
-        "cum_total_cf",
-    ]
+DEAL_DISPLAY_COLS = [
+    "date",
+    "slot_net_oil_production",
+    "slot_net_gas_production",
+    "slot_net_ngl_production",
+    "slot_oil_revenue",
+    "slot_gas_revenue",
+    "slot_ngl_revenue",
+    "slot_total_revenue",
+    "slot_loe",
+    "slot_tax",
+    "slot_operating_profit",
+    "slot_capex",
+    "slot_asset_purchase",
+    "slot_promote",
+    "slot_total_cash_flow",
+    "cum_total_cf",
+]
+
+SLOT_DISPLAY_COLS = [
+    "slot_id",
+    "tc_name",
+    "date",
+    "slot_net_oil_production",
+    "slot_net_gas_production",
+    "slot_net_ngl_production",
+    "slot_oil_revenue",
+    "slot_gas_revenue",
+    "slot_ngl_revenue",
+    "slot_total_revenue",
+    "slot_loe",
+    "slot_tax",
+    "slot_operating_profit",
+    "slot_capex",
+    "slot_asset_purchase",
+    "slot_promote",
+    "slot_total_cash_flow",
+    "cum_total_cf",
+]
 
 if (
     st.session_state["model_has_run"]
