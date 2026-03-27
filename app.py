@@ -157,7 +157,7 @@ gas_sev_tax = st.sidebar.number_input("Gas Severance Tax ($/mcf)", value=0.025, 
 ad_val_tax = st.sidebar.number_input("Ad Valorem Tax (% of Net Revenue)", value=0.025, step=0.005, format="%.3f")
 
 st.sidebar.subheader("Ethane / NGL")
-ethane_rec = st.sidebar.checkbox("Recover Ethane", value=True)
+ethane_rec = st.sidebar.checkbox("Recover Ethane", value=False)
 
 with st.sidebar.expander("Content Percentages", expanded=False):
     content_ethane = st.number_input("Ethane Content %", value=0.50, step=0.01, format="%.3f")
