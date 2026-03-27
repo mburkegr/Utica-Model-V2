@@ -292,7 +292,7 @@ slot_df = st.data_editor(
         "dc_costs": st.column_config.NumberColumn("D&C ($/ft)", format="$%,.0f"),
         "tc_risk": st.column_config.NumberColumn("TC Risk", format="%.2f"),
         "bid_per_acre": st.column_config.NumberColumn("$/Acre Bid", format="$%,d"),
-        "oil_diff": st.column_config.NumberColumn("Oil Diff", format="$%.2f"),
+        "oil_diff": None,
         "gas_diff": st.column_config.NumberColumn("Gas Diff", format="$%.2f"),
         "ngl_diff": st.column_config.NumberColumn("NGL Diff", format="$%.2f"),
         "oil_opex_bbl": st.column_config.NumberColumn("Oil Opex", format="$%.2f"),
