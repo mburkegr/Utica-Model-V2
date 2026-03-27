@@ -658,9 +658,15 @@ if (
     moic_heatmap = build_heatmap(moic_sens_df, "MOIC Sensitivity", metric="moic")
 
     with st.expander("D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
-        st.markdown("### IRR Sensitivity")
-        st.plotly_chart(irr_heatmap, use_container_width=True)
-        st.markdown("### MOIC Sensitivity")
-        st.plotly_chart(moic_heatmap, use_container_width=True)
+    
+        col1, col2 = st.columns(2)
+    
+        with col1:
+            st.markdown("### IRR Sensitivity")
+            st.plotly_chart(irr_heatmap, use_container_width=True)
+    
+        with col2:
+            st.markdown("### MOIC Sensitivity")
+            st.plotly_chart(moic_heatmap, use_container_width=True)
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
