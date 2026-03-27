@@ -162,31 +162,10 @@ def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
                 irr_table.loc[dc, bid] = None
                 moic_table.loc[dc, bid] = None
 
-    irr_table.index.name = "D&C $/ft"
-    irr_table.columns.name = "$/Acre Bid"
-
-    moic_table.index.name = "D&C $/ft"
-    moic_table.columns.name = "$/Acre Bid"
-
     return irr_table, moic_table
 
 
-def format_irr_table(df):
-    formatted = df.copy()
-    for col in formatted.columns:
-        formatted[col] = formatted[col].map(
-            lambda x: f"{x:.2%}" if pd.notnull(x) else ""
-        )
-    return formatted
 
-
-def format_moic_table(df):
-    formatted = df.copy()
-    for col in formatted.columns:
-        formatted[col] = formatted[col].map(
-            lambda x: f"{x:.2f}x" if pd.notnull(x) else ""
-        )
-    return formatted
 
 def format_sensitivity_headers(df):
     formatted = df.copy()
@@ -212,24 +191,61 @@ def format_moic_table(df):
         )
     return formatted
 
-def build_heatmap(df, title, value_format):
+def build_heatmap(df, title, is_irr=False):
     heatmap_df = df.T.copy()
 
-    fig = px.imshow(
-        heatmap_df,
-        text_auto=value_format,   # ← MUST HAVE COMMA
-        aspect="auto",
-        labels={
-            "x": "D&C Costs ($/ft)",
-            "y": "$/Acre Bid",
-            "color": title,
-        },
-        title=title,
-    )
+    if is_irr:
+        colorscale = [
+            [0.00, "rgb(255,180,180)"],
+            [0.15, "rgb(255,180,180)"],
+            [0.15, "rgb(255,255,204)"],
+            [0.25, "rgb(255,255,204)"],
+            [0.25, "rgb(214,232,202)"],
+            [1.00, "rgb(214,232,202)"],
+        ]
+
+        fig = px.imshow(
+            heatmap_df,
+            text_auto=".2%",
+            aspect="auto",
+            color_continuous_scale=colorscale,
+            zmin=0.0,
+            zmax=max(0.40, float(heatmap_df.max().max())),
+            labels={
+                "x": "D&C Costs ($/ft)",
+                "y": "$/Acre Bid",
+                "color": "IRR",
+            },
+            title=title,
+        )
+    else:
+        fig = px.imshow(
+            heatmap_df,
+            text_auto=".2f",
+            aspect="auto",
+            labels={
+                "x": "D&C Costs ($/ft)",
+                "y": "$/Acre Bid",
+                "color": "MOIC",
+            },
+            title=title,
+        )
 
     fig.update_layout(
         xaxis_title="D&C Costs ($/ft)",
         yaxis_title="$/Acre Bid",
+    )
+
+    fig.update_xaxes(
+        tickmode="array",
+        tickvals=list(range(len(heatmap_df.columns))),
+        ticktext=[f"${int(x):,}" for x in heatmap_df.columns]
+    )
+
+    fig.update_yaxes(
+        tickmode="array",
+        tickvals=list(range(len(heatmap_df.index))),
+        ticktext=[f"${int(x):,}" for x in heatmap_df.index]
     )
 
     return fig
@@ -489,26 +505,6 @@ if run_model_clicked:
         st.session_state["moic"] = moic
         st.session_state["model_has_run"] = True
 
-if run_model_clicked:
-    st.session_state["slot_df"] = slot_df  # save latest edits
-
-    if (slot_df["tc_name"] == "Choose TC").any():
-        st.warning("Please select a Type Curve for all slots before running the model.")
-        st.session_state["model_has_run"] = False
-    else:
-        all_slots_df, deal_df, slot_audit_df, deal_audit_df, irr, moic = run_deal_model(
-            slot_df,
-            deal_inputs
-        )
-
-        st.session_state["all_slots_df"] = all_slots_df
-        st.session_state["deal_df"] = deal_df
-        st.session_state["slot_audit_df"] = slot_audit_df
-        st.session_state["deal_audit_df"] = deal_audit_df
-        st.session_state["irr"] = irr
-        st.session_state["moic"] = moic
-        st.session_state["model_has_run"] = True
-
 # -----------------------------
 # Results
 # -----------------------------
@@ -523,46 +519,7 @@ if (
     moic = st.session_state["moic"]
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
-    
-    DEAL_DISPLAY_COLS = [
-        "date",
-        "net_oil",
-        "net_gas",
-        "net_ngl",
-        "net_oil_revenue",
-        "net_gas_revenue",
-        "net_ngl_revenue",
-        "total_revenue",
-        "total_loe",
-        "total_tax",
-        "operating_profit",
-        "capex",
-        "acquisition",
-        "promote",
-        "total_cash_flow",
-        "cum_total_cash_flow",
-    ]
 
-    SLOT_DISPLAY_COLS = [
-        "slot_id",
-        "tc_name",
-        "date",
-        "net_oil",
-        "net_gas",
-        "net_ngl",
-        "net_oil_revenue",
-        "net_gas_revenue",
-        "net_ngl_revenue",
-        "total_revenue",
-        "total_loe",
-        "total_tax",
-        "operating_profit",
-        "capex",
-        "acquisition",
-        "promote",
-        "total_cash_flow",
-        "cum_total_cash_flow",
-    ]
 
     deal_display_df = deal_audit_df[
         [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
@@ -686,26 +643,18 @@ if (
         base_bid=base_bid,
     )
 
-    irr_sens_display = format_sensitivity_headers(irr_sens_df)
-    irr_sens_display = format_irr_table(irr_sens_display)
-
-    moic_sens_display = format_sensitivity_headers(moic_sens_df)
-    moic_sens_display = format_moic_table(moic_sens_display)
-
-    irr_heatmap = build_heatmap(irr_sens_df, "IRR", ".2%")
-    moic_heatmap = build_heatmap(moic_sens_df, "MOIC", ".2f")
+    irr_heatmap = build_heatmap(irr_sens_df, "IRR Sensitivity", is_irr=True)
+    moic_heatmap = build_heatmap(moic_sens_df, "MOIC Sensitivity", is_irr=False)
 
     with st.expander("D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
         st.markdown("### IRR Sensitivity")
-        st.markdown("**Columns:** $/Acre Bid")
-        st.markdown("**Rows:** D&C Costs ($/ft)")
-        st.dataframe(irr_sens_display, use_container_width=True)
+        st.markdown("**Top Axis:** D&C Costs ($/ft)")
+        st.markdown("**Left Axis:** $/Acre Bid")
         st.plotly_chart(irr_heatmap, use_container_width=True)
 
         st.markdown("### MOIC Sensitivity")
-        st.markdown("**Columns:** $/Acre Bid")
-        st.markdown("**Rows:** D&C Costs ($/ft)")
-        st.dataframe(moic_sens_display, use_container_width=True)
+        st.markdown("**Top Axis:** D&C Costs ($/ft)")
+        st.markdown("**Left Axis:** $/Acre Bid")
         st.plotly_chart(moic_heatmap, use_container_width=True)
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
