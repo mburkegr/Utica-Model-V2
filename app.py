@@ -385,17 +385,66 @@ if (
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
 
-    deal_audit_display_df = format_display_df(deal_audit_df)
-    slot_audit_display_df = format_display_df(slot_audit_df)
+    DEAL_DISPLAY_COLS = [
+        "date",
+        "net_oil",
+        "net_gas",
+        "net_ngl",
+        "net_oil_revenue",
+        "net_gas_revenue",
+        "net_ngl_revenue",
+        "total_revenue",
+        "total_loe",
+        "total_tax",
+        "operating_profit",
+        "capex",
+        "acquisition",
+        "promote",
+        "total_cash_flow",
+        "cum_total_cash_flow",
+    ]
+
+    SLOT_DISPLAY_COLS = [
+        "slot_id",
+        "tc_name",
+        "date",
+        "net_oil",
+        "net_gas",
+        "net_ngl",
+        "net_oil_revenue",
+        "net_gas_revenue",
+        "net_ngl_revenue",
+        "total_revenue",
+        "total_loe",
+        "total_tax",
+        "operating_profit",
+        "capex",
+        "acquisition",
+        "promote",
+        "total_cash_flow",
+        "cum_total_cash_flow",
+    ]
+
+    deal_display_df = deal_audit_df[
+        [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
+    ].copy()
+
+    slot_display_df = slot_audit_df[
+        [col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]
+    ].copy()
+
+    deal_audit_display_df = format_display_df(deal_display_df)
+    slot_audit_display_df = format_display_df(slot_display_df)
+
     audit_excel_data = to_excel_bytes(deal_audit_df, slot_audit_df)
-    
+
     with st.expander("Monthly Data", expanded=False):
         st.subheader("Total Deal Monthly Data")
-        st.dataframe(deal_audit_display_df)
-    
+        st.dataframe(deal_audit_display_df, use_container_width=True)
+
         st.subheader("Type Curve Monthly Data")
-        st.dataframe(slot_audit_display_df)
-    
+        st.dataframe(slot_audit_display_df, use_container_width=True)
+
         st.download_button(
             "Download in Excel",
             audit_excel_data,
