@@ -270,8 +270,10 @@ if load_slots_clicked:
     st.session_state["slot_df"] = resize_slot_df(st.session_state["slot_df"], num_slots)
     st.session_state["model_has_run"] = False
 
+slot_df_display = slot_df.drop(columns=["slot_id"], errors="ignore")
+
 slot_df = st.data_editor(
-    st.session_state["slot_df"],
+    slot_df_display,
     num_rows="fixed",
     use_container_width=True,
     key="slot_editor",
