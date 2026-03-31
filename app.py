@@ -236,10 +236,12 @@ def build_heatmap(
     df,
     title,
     metric="irr",
-    x_title="D&C Costs ($/ft)",
-    y_title="$/Acre Bid",
+    x_title="",
+    y_title="",
     x_format="dollar",
     y_format="dollar",
+    base_x=None,
+    base_y=None,
 ):
     heatmap_df = df.copy()
 
@@ -255,7 +257,7 @@ def build_heatmap(
 
     x_vals = [format_axis_value(x, x_format) for x in heatmap_df.columns]
     y_vals = [format_axis_value(y, y_format) for y in heatmap_df.index]
-
+    
     def clamp01(x):
         return max(0.0, min(1.0, x))
 
@@ -331,6 +333,29 @@ def build_heatmap(
         height=360,
     )
 
+    # ---------------------------
+    # Highlight base case cell
+    # ---------------------------
+    if base_x is not None and base_y is not None:
+        try:
+            x_vals_raw = list(heatmap_df.columns)
+            y_vals_raw = list(heatmap_df.index)
+
+            x_idx = x_vals_raw.index(base_x)
+            y_idx = y_vals_raw.index(base_y)
+
+            fig.add_shape(
+                type="rect",
+                x0=x_idx - 0.5,
+                x1=x_idx + 0.5,
+                y0=y_idx - 0.5,
+                y1=y_idx + 0.5,
+                line=dict(color="black", width=3),
+                fillcolor="rgba(0,0,0,0)",
+            )
+        except Exception:
+            pass
+    
     return fig
 
 # -----------------------------
@@ -704,8 +729,25 @@ if (
         base_bid=base_bid,
     )
 
-    irr_heatmap = build_heatmap(irr_sens_df, "IRR Sensitivity", metric="irr")
-    moic_heatmap = build_heatmap(moic_sens_df, "MOIC Sensitivity", metric="moic")
+    irr_heatmap = build_heatmap(
+        irr_sens_df,
+        "IRR Sensitivity",
+        metric="irr",
+        x_title="D&C Costs ($/ft)",
+        y_title="$/Acre Bid",
+        base_x=base_dc,
+        base_y=base_bid,
+    )
+    
+    moic_heatmap = build_heatmap(
+        moic_sens_df,
+        "MOIC Sensitivity",
+        metric="moic",
+        x_title="D&C Costs ($/ft)",
+        y_title="$/Acre Bid",
+        base_x=base_dc,
+        base_y=base_bid,
+    )
 
     bid_values = build_sensitivity_range(base_bid, 500.0, 3)
 
