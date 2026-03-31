@@ -207,14 +207,54 @@ def run_gas_bid_sensitivity(slot_df, deal_inputs, gas_values, bid_values):
 
     return irr_table, moic_table
 
+def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values):
+    irr_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
+    moic_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
+
+    for tc_risk in tc_risk_values:
+        for bid in bid_values:
+            sens_deal_inputs = deal_inputs.copy()
+            sens_deal_inputs["use_bid_override"] = True
+            sens_deal_inputs["bid_override"] = float(bid)
+
+            sens_slot_df = slot_df.copy()
+            sens_slot_df["tc_risk"] = float(tc_risk)
+
+            try:
+                _, _, _, _, irr, moic = run_deal_model(sens_slot_df, sens_deal_inputs)
+                irr_table.loc[bid, tc_risk] = irr
+                moic_table.loc[bid, tc_risk] = moic
+            except Exception:
+                irr_table.loc[bid, tc_risk] = None
+                moic_table.loc[bid, tc_risk] = None
+
+    return irr_table, moic_table
 
 import plotly.graph_objects as go
 
-def build_heatmap(df, title, metric="irr", x_title="D&C Costs ($/ft)", y_title="$/Acre Bid"):
+def build_heatmap(
+    df,
+    title,
+    metric="irr",
+    x_title="D&C Costs ($/ft)",
+    y_title="$/Acre Bid",
+    x_format="dollar",
+    y_format="dollar",
+):
     heatmap_df = df.copy()
 
-    x_vals = [f"${int(x):,}" if float(x).is_integer() else f"${x:,.2f}" for x in heatmap_df.columns]
-    y_vals = [f"${int(y):,}" if float(y).is_integer() else f"${y:,.2f}" for y in heatmap_df.index]
+    def format_axis_value(v, fmt):
+        if fmt == "dollar":
+            return f"${int(v):,}" if float(v).is_integer() else f"${v:,.2f}"
+        elif fmt == "percent":
+            return f"{v:.0%}"
+        elif fmt == "float2":
+            return f"{v:.2f}"
+        else:
+            return str(v)
+
+    x_vals = [format_axis_value(x, x_format) for x in heatmap_df.columns]
+    y_vals = [format_axis_value(y, y_format) for y in heatmap_df.index]
 
     def clamp01(x):
         return max(0.0, min(1.0, x))
@@ -278,12 +318,12 @@ def build_heatmap(df, title, metric="irr", x_title="D&C Costs ($/ft)", y_title="
         title=title,
         xaxis=dict(
             title=x_title,
-            side="top",            # puts axis at top
+            side="top",
             type="category",
             automargin=True,
         ),
         yaxis=dict(
-            title=y_title,         # keeps title on LEFT
+            title=y_title,
             type="category",
             automargin=True,
         ),
@@ -750,5 +790,46 @@ if (
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_gas_bid_heatmap, use_container_width=True)
+
+        tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
+
+    irr_tcrisk_bid_df, moic_tcrisk_bid_df = run_tcrisk_bid_sensitivity(
+        slot_df=slot_df,
+        deal_inputs=deal_inputs,
+        tc_risk_values=tc_risk_values,
+        bid_values=bid_values,
+    )
+
+    irr_tcrisk_bid_heatmap = build_heatmap(
+        irr_tcrisk_bid_df,
+        "IRR Sensitivity",
+        metric="irr",
+        x_title="TC Risk",
+        y_title="$/Acre Bid",
+        x_format="percent",
+        y_format="dollar",
+    )
+
+    moic_tcrisk_bid_heatmap = build_heatmap(
+        moic_tcrisk_bid_df,
+        "MOIC Sensitivity",
+        metric="moic",
+        x_title="TC Risk",
+        y_title="$/Acre Bid",
+        x_format="percent",
+        y_format="dollar",
+    )
+
+    with st.expander("TC Risk vs. \$/Acre Bid Sensitivity", expanded=False):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### IRR Sensitivity")
+            st.plotly_chart(irr_tcrisk_bid_heatmap, use_container_width=True)
+
+        with col2:
+            st.markdown("### MOIC Sensitivity")
+            st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
+
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
