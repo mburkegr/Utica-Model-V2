@@ -698,7 +698,7 @@ if (
         moic_oil_bid_df,
         "MOIC Sensitivity",
         metric="moic",
-        x_title="Oil Price ($/bbl),
+        x_title="Oil Price ($/bbl)",
         y_title="$/Acre Bid",
     )
 
