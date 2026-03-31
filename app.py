@@ -165,8 +165,8 @@ def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
     return irr_table, moic_table
 
 def run_oil_bid_sensitivity(slot_df, deal_inputs, oil_values, bid_values):
-    irr_table = pd.DataFrame(index=bid_values, columns=oil_values)
-    moic_table = pd.DataFrame(index=bid_values, columns=oil_values)
+    irr_table = pd.DataFrame(index=bid_values, columns=oil_values, dtype=float)
+    moic_table = pd.DataFrame(index=bid_values, columns=oil_values, dtype=float)
 
     for oil in oil_values:
         for bid in bid_values:
@@ -187,8 +187,8 @@ def run_oil_bid_sensitivity(slot_df, deal_inputs, oil_values, bid_values):
 
 
 def run_gas_bid_sensitivity(slot_df, deal_inputs, gas_values, bid_values):
-    irr_table = pd.DataFrame(index=bid_values, columns=gas_values)
-    moic_table = pd.DataFrame(index=bid_values, columns=gas_values)
+    irr_table = pd.DataFrame(index=bid_values, columns=gas_values, dtype=float)
+    moic_table = pd.DataFrame(index=bid_values, columns=gas_values, dtype=float)
 
     for gas in gas_values:
         for bid in bid_values:
@@ -690,32 +690,32 @@ if (
         irr_oil_bid_df,
         "IRR Sensitivity",
         metric="irr",
-        x_title="$/Acre Bid",
-        y_title="Oil Price ($/bbl)",
+        x_title="Oil Price ($/bbl)",
+        y_title="$/Acre Bid",
     )
 
     moic_oil_bid_heatmap = build_heatmap(
         moic_oil_bid_df,
         "MOIC Sensitivity",
         metric="moic",
-        x_title="$/Acre Bid",
-        y_title="Oil Price ($/bbl)",
+        x_title="Oil Price ($/bbl),
+        y_title="$/Acre Bid",
     )
 
     irr_gas_bid_heatmap = build_heatmap(
         irr_gas_bid_df,
         "IRR Sensitivity",
         metric="irr",
-        x_title="$/Acre Bid",
-        y_title="Gas Price ($/mcf)",
+        x_title="Gas Price ($/mcf)",
+        y_title="$/Acre Bid",
     )
 
     moic_gas_bid_heatmap = build_heatmap(
         moic_gas_bid_df,
         "MOIC Sensitivity",
         metric="moic",
-        x_title="$/Acre Bid",
-        y_title="Gas Price ($/mcf)",
+        x_title="Gas Price ($/mcf)",
+        y_title="$/Acre Bid",
     )
 
     with st.expander("D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
