@@ -156,11 +156,11 @@ def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
 
             try:
                 _, _, _, _, irr, moic = run_deal_model(slot_df.copy(), sens_deal_inputs)
-                irr_table.loc[dc, bid] = irr
-                moic_table.loc[dc, bid] = moic
+                irr_table.loc[bid, dc] = irr
+                moic_table.loc[bid, dc] = moic
             except Exception:
-                irr_table.loc[dc, bid] = None
-                moic_table.loc[dc, bid] = None
+                irr_table.loc[bid, dc] = None
+                moic_table.loc[bid, dc] = None
 
     return irr_table, moic_table
 
