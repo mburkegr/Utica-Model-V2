@@ -381,18 +381,34 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
     year_order = [str(y) for y in range(2026, 2034)]
 
     # -----------------------------
-    # Days in period (calendar-based)
+    # Days in period (standard calendar quarter / year)
     # -----------------------------
-    q_days = (
-        deal.groupby("quarter_label")["date"]
-        .agg(lambda x: (x.max() - x.min()).days + 1)
-        .reindex(quarter_order)
+    def quarter_days_from_label(q_label):
+        q_num = int(q_label[1])
+        year = 2000 + int(q_label[-2:])
+        quarter_start_month = {1: 1, 2: 4, 3: 7, 4: 10}[q_num]
+    
+        start = pd.Timestamp(year=year, month=quarter_start_month, day=1)
+        end = start + pd.offsets.QuarterEnd(0)
+    
+        return (end - start).days + 1
+    
+    def year_days_from_label(y_label):
+        year = int(y_label)
+        start = pd.Timestamp(year=year, month=1, day=1)
+        end = pd.Timestamp(year=year, month=12, day=31)
+        return (end - start).days + 1
+    
+    q_days = pd.Series(
+        {q: quarter_days_from_label(q) for q in quarter_order},
+        index=quarter_order,
+        dtype=float,
     )
     
-    y_days = (
-        deal.groupby("year_label")["date"]
-        .agg(lambda x: (x.max() - x.min()).days + 1)
-        .reindex(year_order)
+    y_days = pd.Series(
+        {y: year_days_from_label(y) for y in year_order},
+        index=year_order,
+        dtype=float,
     )
     q = deal.groupby("quarter_label").sum(numeric_only=True).reindex(quarter_order)
     y = deal.groupby("year_label").sum(numeric_only=True).reindex(year_order)
