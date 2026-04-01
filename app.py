@@ -380,9 +380,20 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
 
     year_order = [str(y) for y in range(2026, 2034)]
 
-    q_days = deal.groupby("quarter_label")["date"].count().reindex(quarter_order)
-    y_days = deal.groupby("year_label")["date"].count().reindex(year_order)
-
+    # -----------------------------
+    # Days in period (calendar-based)
+    # -----------------------------
+    q_days = (
+        deal.groupby("quarter_label")["date"]
+        .agg(lambda x: (x.max() - x.min()).days + 1)
+        .reindex(quarter_order)
+    )
+    
+    y_days = (
+        deal.groupby("year_label")["date"]
+        .agg(lambda x: (x.max() - x.min()).days + 1)
+        .reindex(year_order)
+    )
     q = deal.groupby("quarter_label").sum(numeric_only=True).reindex(quarter_order)
     y = deal.groupby("year_label").sum(numeric_only=True).reindex(year_order)
 
