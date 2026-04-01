@@ -413,7 +413,7 @@ def build_slot_financials(slot, deal_settings, type_curve_library, global_assump
 # -----------------------------
 # Financial calendar alignment
 # -----------------------------
-def align_to_financial_calendar(slot_df, effective_date, months=359):
+def align_to_financial_calendar(slot_df, effective_date, months=360):
     effective_date = pd.to_datetime(effective_date)
 
     calendar = pd.DataFrame({
