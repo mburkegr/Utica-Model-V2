@@ -333,6 +333,255 @@ def build_heatmap(
         height=360,
     )
 
+    def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
+    import numpy as np
+
+    deal = deal_df.copy()
+    slots = all_slots_df.copy()
+    slot_inputs = slot_df.copy()
+
+    deal["date"] = pd.to_datetime(deal["date"])
+    slots["date"] = pd.to_datetime(slots["date"])
+    slot_inputs["drilling_spud_month"] = pd.to_datetime(slot_inputs["drilling_spud_month"])
+
+    # -----------------------------
+    # Period labels
+    # -----------------------------
+    deal["quarter_label"] = "Q" + deal["date"].dt.quarter.astype(str) + " " + deal["date"].dt.strftime("%y")
+    deal["year_label"] = deal["date"].dt.year.astype(str)
+
+    deal["quarter_sort"] = deal["date"].dt.to_period("Q")
+    deal["year_sort"] = deal["date"].dt.year
+
+    quarter_order = [
+        "Q1 26", "Q2 26", "Q3 26", "Q4 26",
+        "Q1 27", "Q2 27", "Q3 27", "Q4 27",
+    ]
+    
+    year_order = [str(y) for y in range(2026, 2034)]
+
+    # -----------------------------
+    # Days in period
+    # -----------------------------
+    q_days = deal.groupby("quarter_label")["date"].count().reindex(quarter_order)
+    y_days = deal.groupby("year_label")["date"].count().reindex(year_order)
+
+    # -----------------------------
+    # Deal-level sums
+    # -----------------------------
+    q = deal.groupby("quarter_label").sum(numeric_only=True).reindex(quarter_order)
+    y = deal.groupby("year_label").sum(numeric_only=True).reindex(year_order)
+
+    # -----------------------------
+    # Spud counts from slot inputs
+    # -----------------------------
+    slot_metrics = slot_inputs.copy()
+    slot_metrics["spud_quarter"] = "Q" + slot_metrics["drilling_spud_month"].dt.quarter.astype(str) + " " + slot_metrics["drilling_spud_month"].dt.strftime("%y")
+    slot_metrics["spud_year"] = slot_metrics["drilling_spud_month"].dt.year.astype(str)
+
+    # net wells spud logic
+    unit_acres_final = np.where(
+        slot_metrics["use_calc_unit_acres"].fillna(False),
+        slot_metrics["gross_wells"] * slot_metrics["lateral_length"] / 50.0,
+        slot_metrics["unit_acres"]
+    )
+
+    working_interest = np.where(
+        unit_acres_final != 0,
+        (slot_metrics["net_acres"] / unit_acres_final) * slot_metrics["pct_unitized"],
+        0.0
+    )
+
+    net_wells_calc = working_interest * slot_metrics["gross_wells"]
+
+    slot_metrics["gross_wells_spud"] = slot_metrics["gross_wells"]
+    slot_metrics["net_wells_spud"] = net_wells_calc
+
+    q_spud = slot_metrics.groupby("spud_quarter")[["gross_wells_spud", "net_wells_spud"]].sum().reindex(quarter_order).fillna(0.0)
+    y_spud = slot_metrics.groupby("spud_year")[["gross_wells_spud", "net_wells_spud"]].sum().reindex(year_order).fillna(0.0)
+
+    # -----------------------------
+    # Helper calcs
+    # -----------------------------
+    def safe_div(n, d):
+        return np.where((d != 0) & pd.notnull(d), n / d, 0.0)
+
+    def build_section(df, days):
+        out = pd.DataFrame(index=[], columns=df.index)
+
+        oil_price_flat = float(deal_inputs["oil_price"])
+        gas_price_flat = float(deal_inputs["gas_price"])
+
+        # realized pricing
+        realized_oil = safe_div(df["slot_oil_revenue"], df["slot_net_oil_production"])
+        realized_gas = safe_div(df["slot_gas_revenue"], df["slot_net_gas_production"])
+        realized_ngl_price = safe_div(df["slot_ngl_revenue"], df["slot_net_ngl_production"])
+        realized_ngl_pct_wti = safe_div(realized_ngl_price, oil_price_flat)
+
+        # production per day
+        oil_mbbl_d = safe_div(df["slot_net_oil_production"], days)
+        ngl_mbbl_d = safe_div(df["slot_net_ngl_production"], days)
+        gas_mmcf_d = safe_div(df["slot_net_gas_production"], days)
+
+        total_mcfe = (
+            df["slot_net_oil_production"] * 6.0
+            + df["slot_net_ngl_production"] * 6.0
+            + df["slot_net_gas_production"]
+        )
+        total_mcfe_d = safe_div(total_mcfe, days)
+
+        taxes_pos = -df["slot_tax"]
+        loe_pos = -df["slot_loe"]
+        promote_pos = -df["slot_promote"]
+
+        total_opex = taxes_pos + loe_pos + promote_pos
+        ebitda = df["slot_total_revenue"] - total_opex
+
+        d_and_c = -df["slot_capex"]
+        acquisition = -df["slot_asset_purchase"]
+        total_capex = d_and_c + acquisition
+
+        free_cash_flow = df["slot_total_cash_flow"]
+
+        out.loc["Assumed Index Pricing - Crude Oil"] = oil_price_flat
+        out.loc["Assumed Index Pricing - Natural Gas"] = gas_price_flat
+
+        out.loc["Realized Pricing - Crude Oil"] = realized_oil
+        out.loc["Realized Pricing - NGL (% of WTI)"] = realized_ngl_pct_wti
+        out.loc["Realized Pricing - Natural Gas"] = realized_gas
+
+        out.loc["Production - Crude Oil"] = oil_mbbl_d
+        out.loc["Production - NGL's"] = ngl_mbbl_d
+        out.loc["Production - Natural Gas"] = gas_mmcf_d
+        out.loc["Production - Total (Mcfe/d)"] = total_mcfe_d
+
+        out.loc["Revenues - Crude Oil"] = df["slot_oil_revenue"] / 1000.0
+        out.loc["Revenues - NGL's"] = df["slot_ngl_revenue"] / 1000.0
+        out.loc["Revenues - Natural Gas"] = df["slot_gas_revenue"] / 1000.0
+        out.loc["Revenues - Total"] = df["slot_total_revenue"] / 1000.0
+
+        out.loc["Operating Expenses - Taxes"] = taxes_pos / 1000.0
+        out.loc["Operating Expenses - LOE"] = loe_pos / 1000.0
+        out.loc["Operating Expenses - Dale Promote"] = promote_pos / 1000.0
+        out.loc["Operating Expenses - Total Opex"] = total_opex / 1000.0
+
+        out.loc["Taxes / Mcfe"] = safe_div(taxes_pos, total_mcfe)
+        out.loc["LOE / Mcfe"] = safe_div(loe_pos, total_mcfe)
+        out.loc["Promote / Mcfe"] = safe_div(promote_pos, total_mcfe)
+
+        out.loc["EBITDA"] = ebitda / 1000.0
+
+        out.loc["Capital Expenditures - D&C"] = d_and_c / 1000.0
+        out.loc["Capital Expenditures - Acquisition"] = acquisition / 1000.0
+        out.loc["Capital Expenditures - Total"] = total_capex / 1000.0
+
+        out.loc["Free Cash Flow"] = free_cash_flow / 1000.0
+        out.loc["Cumulative FCF"] = (free_cash_flow / 1000.0).cumsum()
+
+        return out
+
+    q_out = build_section(q, q_days)
+    y_out = build_section(y, y_days)
+
+    # insert spud rows
+    q_out.loc["Gross Wells Spud"] = q_spud["gross_wells_spud"]
+    q_out.loc["Net Wells Spud"] = q_spud["net_wells_spud"]
+
+    y_out.loc["Gross Wells Spud"] = y_spud["gross_wells_spud"]
+    y_out.loc["Net Wells Spud"] = y_spud["net_wells_spud"]
+
+    # row order
+    row_order = [
+        "Assumed Index Pricing - Crude Oil",
+        "Assumed Index Pricing - Natural Gas",
+        "Realized Pricing - Crude Oil",
+        "Realized Pricing - NGL (% of WTI)",
+        "Realized Pricing - Natural Gas",
+        "Gross Wells Spud",
+        "Net Wells Spud",
+        "Production - Crude Oil",
+        "Production - NGL's",
+        "Production - Natural Gas",
+        "Production - Total (Mcfe/d)",
+        "Revenues - Crude Oil",
+        "Revenues - NGL's",
+        "Revenues - Natural Gas",
+        "Revenues - Total",
+        "Operating Expenses - Taxes",
+        "Operating Expenses - LOE",
+        "Operating Expenses - Dale Promote",
+        "Operating Expenses - Total Opex",
+        "Taxes / Mcfe",
+        "LOE / Mcfe",
+        "Promote / Mcfe",
+        "EBITDA",
+        "Capital Expenditures - D&C",
+        "Capital Expenditures - Acquisition",
+        "Capital Expenditures - Total",
+        "Free Cash Flow",
+        "Cumulative FCF",
+    ]
+
+    q_out = q_out.reindex(row_order)
+    y_out = y_out.reindex(row_order)
+
+    separator = pd.DataFrame(
+        index=q_out.index,
+        columns=[" "],
+        data=""
+    )
+    
+    final = pd.concat([q_out, separator, y_out], axis=1)
+    return final
+
+    def format_quarterly_output_table(df):
+    formatted = df.copy()
+
+    pct_rows = {
+        "Realized Pricing - NGL (% of WTI)",
+    }
+
+    dollar_per_unit_rows = {
+        "Taxes / Mcfe",
+        "LOE / Mcfe",
+        "Promote / Mcfe",
+    }
+
+    price_rows = {
+        "Assumed Index Pricing - Crude Oil",
+        "Assumed Index Pricing - Natural Gas",
+        "Realized Pricing - Crude Oil",
+        "Realized Pricing - Natural Gas",
+    }
+
+    production_rows = {
+        "Production - Crude Oil",
+        "Production - NGL's",
+        "Production - Natural Gas",
+        "Production - Total (Mcfe/d)",
+        "Gross Wells Spud",
+        "Net Wells Spud",
+    }
+
+    for idx in formatted.index:
+        for col in formatted.columns:
+            val = formatted.loc[idx, col]
+
+            if pd.isnull(val):
+                formatted.loc[idx, col] = "-"
+            elif idx in pct_rows:
+                formatted.loc[idx, col] = f"{val:.0%}"
+            elif idx in dollar_per_unit_rows:
+                formatted.loc[idx, col] = f"${val:.2f}"
+            elif idx in price_rows:
+                formatted.loc[idx, col] = f"${val:.2f}"
+            elif idx in production_rows:
+                formatted.loc[idx, col] = f"{val:,.0f}" if abs(val) >= 10 else f"{val:,.2f}"
+            else:
+                formatted.loc[idx, col] = f"${val:,.1f}"
+
+    return formatted
+    
     # ---------------------------
     # Highlight base case cell
     # ---------------------------
@@ -889,6 +1138,18 @@ if (
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
+
+    quarterly_output_df = build_quarterly_output_table(
+        deal_df=deal_df,
+        all_slots_df=all_slots_df,
+        slot_df=slot_df,
+        deal_inputs=deal_inputs,
+    )
+
+    quarterly_output_display = format_quarterly_output_table(quarterly_output_df)
+
+    with st.expander("Quarterly Output", expanded=False):
+        st.dataframe(quarterly_output_display, use_container_width=True)
 
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
