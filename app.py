@@ -659,8 +659,14 @@ st.sidebar.header("Deal-Level Inputs")
 st.sidebar.subheader("Timing")
 effective_date = st.sidebar.date_input("Effective Date", value=next_month_start())
 
-use_acquisition_override = st.sidebar.checkbox("Use Acquisition Cost Override", value=False)
+st.sidebar.subheader("Pricing")
+oil_price = st.sidebar.number_input("Oil Price ($/bbl)", value=60.0, step=1.0)
+gas_price = st.sidebar.number_input("Gas Price ($/mcf)", value=3.75, step=0.05)
 
+st.sidebar.subheader("Overrides")
+
+# Acquisition Override
+use_acquisition_override = st.sidebar.checkbox("Use Acquisition Cost Override", value=False)
 acquisition_cost_override = st.sidebar.number_input(
     "Acquisition Cost Override",
     min_value=0.0,
@@ -670,16 +676,23 @@ acquisition_cost_override = st.sidebar.number_input(
     disabled=not use_acquisition_override
 )
 
-st.sidebar.subheader("Pricing")
-oil_price = st.sidebar.number_input("Oil Price ($/bbl)", value=60.0, step=1.0)
-gas_price = st.sidebar.number_input("Gas Price ($/mcf)", value=3.75, step=0.05)
-
-st.sidebar.subheader("Overrides")
+# D&C Override
 use_dc_override = st.sidebar.checkbox("Use D&C Override for All Slots", value=False)
-dc_override = st.sidebar.number_input("D&C Override ($/ft)", value=750.0, step=25.0, disabled=not use_dc_override)
+dc_override = st.sidebar.number_input(
+    "D&C Override ($/ft)",
+    value=750.0,
+    step=25.0,
+    disabled=not use_dc_override
+)
 
+# Bid Override
 use_bid_override = st.sidebar.checkbox("Use $/Acre Override for All Slots", value=False)
-bid_override = st.sidebar.number_input("$/Acre Override", value=8000.0, step=250.0, disabled=not use_bid_override)
+bid_override = st.sidebar.number_input(
+    "$/Acre Override",
+    value=8000.0,
+    step=250.0,
+    disabled=not use_bid_override
+)
 
 st.sidebar.subheader("Taxes")
 oil_sev_tax = st.sidebar.number_input("Oil Severance Tax ($/bbl)", value=0.10, step=0.01, format="%.3f")
