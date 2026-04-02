@@ -600,7 +600,225 @@ def format_quarterly_output_table(df):
                 formatted.loc[idx, col] = f"${val:,.1f}"
 
     return formatted
+
+    QUARTERLY_HEADER_COLOR = "#4E80B1"  # RGB(78, 128, 177)
+
+
+def build_quarterly_output_display_table(df):
+    first_col = "$ in Thousands"
+    data_cols = list(df.columns)
+
+    pct_rows = {
+        "Realized Pricing - NGL (% of WTI)",
+    }
+
+    dollar_per_unit_rows = {
+        "Taxes / Mcfe",
+        "LOE / Mcfe",
+        "Promote / Mcfe",
+    }
+
+    price_rows = {
+        "Assumed Index Pricing - Crude Oil",
+        "Assumed Index Pricing - Natural Gas",
+        "Realized Pricing - Crude Oil",
+        "Realized Pricing - Natural Gas",
+    }
+
+    production_rows = {
+        "Production - Crude Oil",
+        "Production - NGL's",
+        "Production - Natural Gas",
+        "Production - Total (Mcfe/d)",
+        "Gross Wells Spud",
+        "Net Wells Spud",
+    }
+
+    def fmt_value(source_row, col):
+        val = df.loc[source_row, col]
+
+        if col == " ":
+            return ""
+        if pd.isnull(val) or val == "":
+            return ""
+
+        if source_row in pct_rows:
+            return f"{val:.0%}"
+        elif source_row in dollar_per_unit_rows:
+            return f"${val:.2f}"
+        elif source_row in price_rows:
+            return f"${val:.2f}"
+        elif source_row in production_rows:
+            return f"{val:,.0f}" if abs(val) >= 10 else f"{val:,.2f}"
+        else:
+            return f"${val:,.1f}"
+
+    rows = []
+    row_styles = []
+
+    def add_section(label):
+        row = {first_col: label}
+        for c in data_cols:
+            row[c] = ""
+        rows.append(row)
+        row_styles.append("section")
+
+    def add_gap():
+        row = {first_col: ""}
+        for c in data_cols:
+            row[c] = ""
+        rows.append(row)
+        row_styles.append("gap")
+
+    def add_data(label, source_row, indent=False, style="normal"):
+        display_label = f"    {label}" if indent else label
+        row = {first_col: display_label}
+        for c in data_cols:
+            row[c] = fmt_value(source_row, c)
+        rows.append(row)
+        row_styles.append(style)
+
+    add_section("Assumed Index Pricing")
+    add_data("Crude Oil", "Assumed Index Pricing - Crude Oil", indent=True)
+    add_data("Natural Gas", "Assumed Index Pricing - Natural Gas", indent=True)
+
+    add_gap()
+
+    add_section("Realized Pricing")
+    add_data("Crude Oil", "Realized Pricing - Crude Oil", indent=True)
+    add_data("Natural Gas", "Realized Pricing - Natural Gas", indent=True)
+    add_data("NGL (% of WTI)", "Realized Pricing - NGL (% of WTI)", indent=True)
+
+    add_gap()
+
+    add_data("Gross Wells Spud", "Gross Wells Spud", indent=False)
+    add_data("Net Wells Spud", "Net Wells Spud", indent=False)
+
+    add_gap()
+
+    add_section("Production")
+    add_data("Crude Oil", "Production - Crude Oil", indent=True)
+    add_data("Natural Gas", "Production - Natural Gas", indent=True)
+    add_data("NGL's", "Production - NGL's", indent=True)
+    add_data("Total (Mcfe/d)", "Production - Total (Mcfe/d)", indent=False, style="bold")
+
+    add_gap()
+
+    add_section("Revenues")
+    add_data("Crude Oil", "Revenues - Crude Oil", indent=True)
+    add_data("Natural Gas", "Revenues - Natural Gas", indent=True)
+    add_data("NGL's", "Revenues - NGL's", indent=True)
+    add_data("Total", "Revenues - Total", indent=False)
+
+    add_gap()
+
+    add_section("Operating Expenses")
+    add_data("Taxes", "Operating Expenses - Taxes", indent=True)
+    add_data("LOE", "Operating Expenses - LOE", indent=True)
+    add_data("Dale Promote", "Operating Expenses - Dale Promote", indent=True)
+    add_data("Total", "Operating Expenses - Total Opex", indent=False)
+
+    add_gap()
+
+    add_data("Taxes / Mcfe", "Taxes / Mcfe", indent=False, style="italic")
+    add_data("LOE / Mcfe", "LOE / Mcfe", indent=False, style="italic")
+    add_data("Promote / Mcfe", "Promote / Mcfe", indent=False, style="italic")
+
+    add_gap()
+
+    add_data("EBITDA", "EBITDA", indent=False, style="bold")
+
+    add_gap()
+
+    add_section("Capital Expenditures")
+    add_data("D&C", "Capital Expenditures - D&C", indent=True)
+    add_data("Acquisition", "Capital Expenditures - Acquisition", indent=True)
+    add_data("Total", "Capital Expenditures - Total", indent=False)
+
+    add_gap()
+
+    add_data("Free Cash Flow", "Free Cash Flow", indent=False, style="bold")
+
+    add_gap()
+
+    add_data("Cumulative FCF", "Cumulative FCF", indent=False, style="footer")
+
+    display_df = pd.DataFrame(rows)
+    return display_df, row_styles
+
+
+    def style_quarterly_output_table(display_df, row_styles):
+        style_map = pd.Series(row_styles, index=display_df.index)
     
+        def row_style(row):
+            rtype = style_map.loc[row.name]
+            styles = [""] * len(row)
+    
+            if rtype == "section":
+                styles = ["font-weight: 700;"] + [""] * (len(row) - 1)
+            elif rtype == "bold":
+                styles = ["font-weight: 700;"] * len(row)
+            elif rtype == "italic":
+                styles = ["font-style: italic;"] * len(row)
+            elif rtype == "footer":
+                styles = [f"background-color: {QUARTERLY_HEADER_COLOR}; color: white; font-weight: 700;"] * len(row)
+            elif rtype == "gap":
+                styles = [""] * len(row)
+    
+            return styles
+    
+        first_col = display_df.columns[0]
+        other_cols = list(display_df.columns[1:])
+    
+        styler = (
+            display_df.style
+            .apply(row_style, axis=1)
+            .set_properties(subset=[first_col], **{
+                "text-align": "left",
+                "white-space": "pre",
+            })
+            .set_properties(subset=other_cols, **{
+                "text-align": "right",
+            })
+            .set_table_styles([
+                {
+                    "selector": "thead th",
+                    "props": [
+                        ("background-color", QUARTERLY_HEADER_COLOR),
+                        ("color", "white"),
+                        ("font-weight", "700"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {
+                    "selector": "tbody td",
+                    "props": [
+                        ("border", "1px solid #e6e6e6"),
+                    ],
+                },
+            ], overwrite=False)
+        )
+    
+        return styler
+    
+    
+    def render_deal_highlight_box(title, value):
+        st.markdown(
+            f"""
+            <div style="
+                background-color: {QUARTERLY_HEADER_COLOR};
+                color: white;
+                padding: 14px 10px;
+                border-radius: 6px;
+                text-align: center;
+                font-weight: 700;
+            ">
+                <div style="font-size: 13px; margin-bottom: 6px;">{title}</div>
+                <div style="font-size: 24px;">{value}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     # ---------------------------
     # Highlight base case cell
     # ---------------------------
