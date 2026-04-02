@@ -1169,6 +1169,82 @@ def render_deal_highlight_box(title, value):
         unsafe_allow_html=True,
     )
 
+def build_quarterly_fcf_chart(quarterly_output_df):
+    quarter_cols = [c for c in quarterly_output_df.columns if str(c).startswith("Q")]
+
+    fcf = quarterly_output_df.loc["Free Cash Flow", quarter_cols].astype(float)
+    cum_fcf = quarterly_output_df.loc["Cumulative FCF", quarter_cols].astype(float)
+
+    fig = go.Figure()
+
+    fig.add_bar(
+        x=quarter_cols,
+        y=fcf,
+        name="Free Cash Flow",
+    )
+
+    fig.add_scatter(
+        x=quarter_cols,
+        y=cum_fcf,
+        mode="lines+markers",
+        name="Cumulative FCF",
+        yaxis="y2",
+    )
+
+    fig.update_layout(
+        title="Quarterly Free Cash Flow",
+        xaxis=dict(title="Quarter"),
+        yaxis=dict(title="$ in Thousands"),
+        yaxis2=dict(
+            title="Cumulative FCF ($ in Thousands)",
+            overlaying="y",
+            side="right",
+            showgrid=False,
+        ),
+        legend=dict(orientation="h"),
+        height=450,
+    )
+
+    return fig
+
+
+def build_production_profile_chart(deal_df):
+    df = deal_df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+
+    fig = go.Figure()
+
+    fig.add_scatter(
+        x=df["date"],
+        y=df["slot_net_oil_production"],
+        mode="lines",
+        name="Oil",
+    )
+
+    fig.add_scatter(
+        x=df["date"],
+        y=df["slot_net_gas_production"],
+        mode="lines",
+        name="Gas",
+    )
+
+    fig.add_scatter(
+        x=df["date"],
+        y=df["slot_net_ngl_production"],
+        mode="lines",
+        name="NGL",
+    )
+
+    fig.update_layout(
+        title="Production Profile",
+        xaxis=dict(title="Date"),
+        yaxis=dict(title="Net Production"),
+        legend=dict(orientation="h"),
+        height=450,
+    )
+
+    return fig
+
 
 # -----------------------------
 # Session state init
@@ -1762,5 +1838,19 @@ if (
             tc_output_styler.to_html(),
             unsafe_allow_html=True,
         )
+
+    with st.expander("TC Assumptions Output", expanded=False):
+        st.markdown(
+            tc_output_styler.to_html(),
+            unsafe_allow_html=True,
+        )
+
+    fcf_chart = build_quarterly_fcf_chart(quarterly_output_df)
+    prod_chart = build_production_profile_chart(deal_df)
+
+    with st.expander("Charts", expanded=False):
+        st.plotly_chart(fcf_chart, use_container_width=True)
+        st.plotly_chart(prod_chart, use_container_width=True)
+
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
