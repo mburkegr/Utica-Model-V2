@@ -566,10 +566,8 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
     deal["quarter_label"] = "Q" + deal["date"].dt.quarter.astype(str) + " " + deal["date"].dt.strftime("%y")
     deal["year_label"] = deal["date"].dt.year.astype(str)
 
-    quarter_order = [
-        "Q1 26", "Q2 26", "Q3 26", "Q4 26",
-        "Q1 27", "Q2 27", "Q3 27", "Q4 27",
-    ]
+    quarter_order = sorted(deal["quarter_label"].dropna().unique())
+    year_order = sorted(deal["year_label"].dropna().unique())
 
     year_order = [str(y) for y in range(2026, 2034)]
 
