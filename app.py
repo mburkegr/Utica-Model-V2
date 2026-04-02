@@ -133,8 +133,7 @@ def next_month_start():
     today = date.today()
     if today.month == 12:
         return date(today.year + 1, 1, 1)
-    return date(today.year, today.month + 1, 1, 1)
-
+    return date(today.year, today.month + 1, 1)
 
 def build_slot_template(num_slots):
     rows = []
