@@ -9,7 +9,6 @@ from model import run_deal_model
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
 st.title("Utica Deal Model")
-inject_app_css()
 
 # -----------------------------
 # Helpers
@@ -237,6 +236,9 @@ def inject_app_css():
         """,
         unsafe_allow_html=True,
     )
+    
+st.title("Utica Deal Model")
+inject_app_css()
 
 @st.cache_data
 
@@ -1805,11 +1807,12 @@ if (
                 "$/Acre Bid",
                 format_accounting_number(blended_bid, decimals=0, prefix="$")
             )
-            tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(slot_df)
-            tc_output_styler = style_tc_assumptions_output_table(
-                tc_output_display_df,
-                tc_output_row_styles,
-            )
+            
+    tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(slot_df)
+    tc_output_styler = style_tc_assumptions_output_table(
+        tc_output_display_df,
+        tc_output_row_styles,
+    )
 
     with st.expander("TC Assumptions Output", expanded=False):
         st.markdown(
