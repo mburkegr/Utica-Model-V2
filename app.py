@@ -1,15 +1,16 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
+from io import BytesIO
+
+import plotly.graph_objects as go
 
 from model import run_deal_model
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
 st.title("Utica Deal Model")
 
-from io import BytesIO
 
-import plotly.graph_objects as go
 # -----------------------------
 # Helpers
 # -----------------------------
@@ -41,6 +42,71 @@ def pretty_column_name(col):
     return name_map.get(col, col.replace("_", " ").title())
 
 
+def is_effectively_zero(x, tol=1e-9):
+    return pd.notnull(x) and abs(float(x)) < tol
+
+
+def format_accounting_number(
+    x,
+    decimals=1,
+    prefix="",
+    suffix="",
+    zero_as_dash=True,
+    null_as_blank=True,
+):
+    if pd.isnull(x):
+        return "" if null_as_blank else "-"
+
+    x = float(x)
+
+    if zero_as_dash and is_effectively_zero(x):
+        return "-"
+
+    abs_text = f"{abs(x):,.{decimals}f}"
+    text = f"{prefix}{abs_text}{suffix}"
+
+    return f"({text})" if x < 0 else text
+
+
+def format_accounting_percent(
+    x,
+    decimals=0,
+    zero_as_dash=True,
+    null_as_blank=True,
+):
+    if pd.isnull(x):
+        return "" if null_as_blank else "-"
+
+    x = float(x)
+
+    if zero_as_dash and is_effectively_zero(x):
+        return "-"
+
+    abs_text = f"{abs(x):.{decimals}%}"
+    return f"({abs_text})" if x < 0 else abs_text
+
+
+def format_accounting_production(
+    x,
+    large_decimals=0,
+    small_decimals=2,
+    threshold=10,
+    zero_as_dash=True,
+    null_as_blank=True,
+):
+    if pd.isnull(x):
+        return "" if null_as_blank else "-"
+
+    x = float(x)
+
+    if zero_as_dash and is_effectively_zero(x):
+        return "-"
+
+    decimals = large_decimals if abs(x) >= threshold else small_decimals
+    abs_text = f"{abs(x):,.{decimals}f}"
+    return f"({abs_text})" if x < 0 else abs_text
+
+
 def format_display_df(df):
     display_df = df.copy()
 
@@ -49,11 +115,12 @@ def format_display_df(df):
             display_df[col] = display_df[col].dt.strftime("%Y-%m-%d")
         elif pd.api.types.is_numeric_dtype(display_df[col]):
             display_df[col] = display_df[col].map(
-                lambda x: f"{x:,.1f}" if pd.notnull(x) else ""
+                lambda x: format_accounting_number(x, decimals=1)
             )
 
     display_df.columns = [pretty_column_name(col) for col in display_df.columns]
     return display_df
+
 
 @st.cache_data
 def load_tc_names():
@@ -66,7 +133,7 @@ def next_month_start():
     today = date.today()
     if today.month == 12:
         return date(today.year + 1, 1, 1)
-    return date(today.year, today.month + 1, 1)
+    return date(today.year, today.month + 1, 1, 1)
 
 
 def build_slot_template(num_slots):
@@ -117,6 +184,7 @@ def resize_slot_df(existing_df, target_slots):
     trimmed_df["slot_id"] = range(1, target_slots + 1)
     return trimmed_df
 
+
 def to_excel_bytes(deal_df, slot_df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -124,6 +192,7 @@ def to_excel_bytes(deal_df, slot_df):
         slot_df.to_excel(writer, index=False, sheet_name="Slot Audit")
     output.seek(0)
     return output.getvalue()
+
 
 def apply_calc_unit_acres(df):
     df = df.copy()
@@ -135,6 +204,7 @@ def apply_calc_unit_acres(df):
 
     return df
 
+
 def build_sensitivity_range(base_value, step, steps_each_way=3):
     return [base_value + step * i for i in range(-steps_each_way, steps_each_way + 1)]
 
@@ -142,7 +212,7 @@ def build_sensitivity_range(base_value, step, steps_each_way=3):
 def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
     dc_values = build_sensitivity_range(base_dc, 50.0, 3)
     bid_values = build_sensitivity_range(base_bid, 500.0, 3)
-    
+
     irr_table = pd.DataFrame(index=bid_values, columns=dc_values)
     moic_table = pd.DataFrame(index=bid_values, columns=dc_values)
 
@@ -163,6 +233,7 @@ def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
                 moic_table.loc[bid, dc] = None
 
     return irr_table, moic_table
+
 
 def run_oil_bid_sensitivity(slot_df, deal_inputs, oil_values, bid_values):
     irr_table = pd.DataFrame(index=bid_values, columns=oil_values, dtype=float)
@@ -207,6 +278,7 @@ def run_gas_bid_sensitivity(slot_df, deal_inputs, gas_values, bid_values):
 
     return irr_table, moic_table
 
+
 def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values):
     irr_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
@@ -230,7 +302,6 @@ def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values)
 
     return irr_table, moic_table
 
-import plotly.graph_objects as go
 
 def build_heatmap(
     df,
@@ -300,6 +371,11 @@ def build_heatmap(
             [high_norm, "rgb(214,232,202)"],
             [1.00, "rgb(214,232,202)"],
         ]
+    else:
+        text_vals = heatmap_df.map(lambda x: f"{x}" if pd.notnull(x) else "")
+        zmin = 0.0
+        zmax = 1.0
+        colorscale = "RdYlGn"
 
     fig = go.Figure(
         data=go.Heatmap(
@@ -380,36 +456,34 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
 
     year_order = [str(y) for y in range(2026, 2034)]
 
-    # -----------------------------
-    # Days in period (standard calendar quarter / year)
-    # -----------------------------
     def quarter_days_from_label(q_label):
         q_num = int(q_label[1])
         year = 2000 + int(q_label[-2:])
         quarter_start_month = {1: 1, 2: 4, 3: 7, 4: 10}[q_num]
-    
+
         start = pd.Timestamp(year=year, month=quarter_start_month, day=1)
         end = start + pd.offsets.QuarterEnd(0)
-    
+
         return (end - start).days + 1
-    
+
     def year_days_from_label(y_label):
         year = int(y_label)
         start = pd.Timestamp(year=year, month=1, day=1)
         end = pd.Timestamp(year=year, month=12, day=31)
         return (end - start).days + 1
-    
+
     q_days = pd.Series(
         {q: quarter_days_from_label(q) for q in quarter_order},
         index=quarter_order,
         dtype=float,
     )
-    
+
     y_days = pd.Series(
         {y: year_days_from_label(y) for y in year_order},
         index=year_order,
         dtype=float,
     )
+
     q = deal.groupby("quarter_label").sum(numeric_only=True).reindex(quarter_order)
     y = deal.groupby("year_label").sum(numeric_only=True).reindex(year_order)
 
@@ -589,17 +663,28 @@ def format_quarterly_output_table(df):
             elif pd.isnull(val):
                 formatted.loc[idx, col] = "-"
             elif idx in pct_rows:
-                formatted.loc[idx, col] = f"{val:.0%}"
+                formatted.loc[idx, col] = format_accounting_percent(
+                    val, decimals=0, null_as_blank=False
+                )
             elif idx in dollar_per_unit_rows:
-                formatted.loc[idx, col] = f"${val:.2f}"
+                formatted.loc[idx, col] = format_accounting_number(
+                    val, decimals=2, prefix="$", null_as_blank=False
+                )
             elif idx in price_rows:
-                formatted.loc[idx, col] = f"${val:.2f}"
+                formatted.loc[idx, col] = format_accounting_number(
+                    val, decimals=2, prefix="$", null_as_blank=False
+                )
             elif idx in production_rows:
-                formatted.loc[idx, col] = f"{val:,.0f}" if abs(val) >= 10 else f"{val:,.2f}"
+                formatted.loc[idx, col] = format_accounting_production(
+                    val, null_as_blank=False
+                )
             else:
-                formatted.loc[idx, col] = f"${val:,.1f}"
+                formatted.loc[idx, col] = format_accounting_number(
+                    val, decimals=1, prefix="$", null_as_blank=False
+                )
 
     return formatted
+
 
 QUARTERLY_HEADER_COLOR = "#4E80B1"  # RGB(78, 128, 177)
 
@@ -643,15 +728,15 @@ def build_quarterly_output_display_table(df):
             return ""
 
         if source_row in pct_rows:
-            return f"{val:.0%}"
+            return format_accounting_percent(val, decimals=0)
         elif source_row in dollar_per_unit_rows:
-            return f"${val:.2f}"
+            return format_accounting_number(val, decimals=2, prefix="$")
         elif source_row in price_rows:
-            return f"${val:.2f}"
+            return format_accounting_number(val, decimals=2, prefix="$")
         elif source_row in production_rows:
-            return f"{val:,.0f}" if abs(val) >= 10 else f"{val:,.2f}"
+            return format_accounting_production(val)
         else:
-            return f"${val:,.1f}"
+            return format_accounting_number(val, decimals=1, prefix="$")
 
     rows = []
     row_styles = []
@@ -746,6 +831,7 @@ def build_quarterly_output_display_table(df):
     display_df = pd.DataFrame(rows)
     return display_df, row_styles
 
+
 def style_quarterly_output_table(display_df, row_styles):
     style_map = pd.Series(row_styles, index=display_df.index)
 
@@ -807,7 +893,7 @@ def style_quarterly_output_table(display_df, row_styles):
                 ],
             },
             {
-                "selector": f"tbody td.col0",
+                "selector": "tbody td.col0",
                 "props": [
                     ("text-align", "left"),
                     ("white-space", "pre"),
@@ -823,7 +909,8 @@ def style_quarterly_output_table(display_df, row_styles):
     )
 
     return styler
-    
+
+
 def render_deal_highlight_box(title, value):
     st.markdown(
         f"""
@@ -841,7 +928,8 @@ def render_deal_highlight_box(title, value):
         """,
         unsafe_allow_html=True,
     )
-    
+
+
 # -----------------------------
 # Session state init
 # -----------------------------
@@ -878,7 +966,6 @@ gas_price = st.sidebar.number_input("Gas Price ($/mcf)", value=3.75, step=0.05)
 
 st.sidebar.subheader("Overrides")
 
-# Acquisition Override
 use_acquisition_override = st.sidebar.checkbox("Use Acquisition Cost Override", value=False)
 acquisition_cost_override = st.sidebar.number_input(
     "Acquisition Cost Override",
@@ -889,7 +976,6 @@ acquisition_cost_override = st.sidebar.number_input(
     disabled=not use_acquisition_override
 )
 
-# D&C Override
 use_dc_override = st.sidebar.checkbox("Use D&C Override for All Slots", value=False)
 dc_override = st.sidebar.number_input(
     "D&C Override ($/ft)",
@@ -898,7 +984,6 @@ dc_override = st.sidebar.number_input(
     disabled=not use_dc_override
 )
 
-# Bid Override
 use_bid_override = st.sidebar.checkbox("Use $/Acre Override for All Slots", value=False)
 bid_override = st.sidebar.number_input(
     "$/Acre Override",
@@ -1026,7 +1111,6 @@ if load_slots_clicked:
     st.session_state["slot_df"] = resize_slot_df(st.session_state["slot_df"], num_slots)
     st.session_state["model_has_run"] = False
 
-# Apply calc before display
 st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"])
 
 slot_df_display = st.session_state["slot_df"]
@@ -1062,22 +1146,18 @@ slot_df = st.data_editor(
     },
 ).copy()
 
-# Run button FIRST
 run_model_clicked = st.button("Run Model")
 
-# Apply calc after edit
 slot_df = apply_calc_unit_acres(slot_df)
 
-# Only rerun if something changed
 if not slot_df.equals(st.session_state["slot_df"]):
     st.session_state["slot_df"] = slot_df
     st.rerun()
 else:
     st.session_state["slot_df"] = slot_df
 
-# Then use button
 if run_model_clicked:
-    st.session_state["slot_df"] = slot_df  # save latest edits
+    st.session_state["slot_df"] = slot_df
 
     if (slot_df["tc_name"] == "Choose TC").any():
         st.warning("Please select a Type Curve for all slots before running the model.")
@@ -1096,10 +1176,10 @@ if run_model_clicked:
         st.session_state["moic"] = moic
         st.session_state["model_has_run"] = True
 
+
 # -----------------------------
 # Results
 # -----------------------------
-
 DEAL_DISPLAY_COLS = [
     "date",
     "slot_net_oil_production",
@@ -1155,11 +1235,11 @@ if (
     deal_display_df = deal_audit_df[
         [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
     ].copy()
-    
+
     slot_display_df = slot_audit_df[
         [col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]
     ].copy()
-    
+
     deal_audit_display_df = format_display_df(deal_display_df)
     slot_audit_display_df = format_display_df(slot_display_df)
 
@@ -1194,17 +1274,17 @@ if (
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        st.metric("Total Net Acres", f"{total_net_acres:,.1f}")
+        st.metric("Total Net Acres", format_accounting_number(total_net_acres, decimals=1))
     with col2:
         total_acquisition_cost = -deal_df["slot_asset_purchase"].sum()
-        st.metric("Acquisition Cost", f"${total_acquisition_cost:,.1f}")
+        st.metric("Acquisition Cost", format_accounting_number(total_acquisition_cost, decimals=1, prefix="$"))
     with col3:
-        st.metric("$/Acre Bid", f"${blended_bid:,.0f}")
+        st.metric("$/Acre Bid", format_accounting_number(blended_bid, decimals=0, prefix="$"))
     with col4:
-        st.metric("IRR", f"{irr:.1%}" if irr is not None else "N/A")
+        st.metric("IRR", format_accounting_percent(irr, decimals=1, zero_as_dash=False) if irr is not None else "N/A")
     with col5:
-        st.metric("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
-    
+        st.metric("MOIC", format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A")
+
     st.subheader("Sensitivity Tables")
 
     base_dc = (
@@ -1235,7 +1315,7 @@ if (
         base_x=base_dc,
         base_y=base_bid,
     )
-    
+
     moic_heatmap = build_heatmap(
         moic_sens_df,
         "MOIC Sensitivity",
@@ -1247,9 +1327,7 @@ if (
     )
 
     bid_values = build_sensitivity_range(base_bid, 500.0, 3)
-
     tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
-    
     oil_values = [50, 55, 60, 65, 70]
     gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
 
@@ -1276,7 +1354,7 @@ if (
         base_x=deal_inputs["oil_price"],
         base_y=base_bid,
     )
-    
+
     moic_oil_bid_heatmap = build_heatmap(
         moic_oil_bid_df,
         "MOIC Sensitivity",
@@ -1296,7 +1374,7 @@ if (
         base_x=deal_inputs["gas_price"],
         base_y=base_bid,
     )
-    
+
     moic_gas_bid_heatmap = build_heatmap(
         moic_gas_bid_df,
         "MOIC Sensitivity",
@@ -1305,7 +1383,7 @@ if (
         y_title="$/Acre Bid",
         base_x=deal_inputs["gas_price"],
         base_y=base_bid,
-    )   
+    )
 
     with st.expander("D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
         col1, col2 = st.columns(2)
@@ -1339,7 +1417,7 @@ if (
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_gas_bid_heatmap, use_container_width=True)
-    
+
     irr_tcrisk_bid_df, moic_tcrisk_bid_df = run_tcrisk_bid_sensitivity(
         slot_df=slot_df,
         deal_inputs=deal_inputs,
@@ -1348,7 +1426,7 @@ if (
     )
 
     base_tc_risk = float(slot_df["tc_risk"].iloc[0])
-    
+
     irr_tcrisk_bid_heatmap = build_heatmap(
         irr_tcrisk_bid_df,
         "IRR Sensitivity",
@@ -1360,7 +1438,7 @@ if (
         base_x=base_tc_risk,
         base_y=base_bid,
     )
-    
+
     moic_tcrisk_bid_heatmap = build_heatmap(
         moic_tcrisk_bid_df,
         "MOIC Sensitivity",
@@ -1390,33 +1468,45 @@ if (
         slot_df=slot_df,
         deal_inputs=deal_inputs,
     )
-    
+
     quarterly_output_display_df, quarterly_row_styles = build_quarterly_output_display_table(quarterly_output_df)
     quarterly_output_styler = style_quarterly_output_table(
         quarterly_output_display_df,
         quarterly_row_styles,
     )
-    
+
     with st.expander("Quarterly Output", expanded=False):
         st.markdown(
             quarterly_output_styler.to_html(),
             unsafe_allow_html=True,
         )
-    
+
         st.markdown("### Deal Highlights")
-    
+
         h1, h2, h3, h4 = st.columns(4)
-    
+
         with h1:
-            render_deal_highlight_box("IRR", f"{irr:.1%}" if irr is not None else "N/A")
-    
+            render_deal_highlight_box(
+                "IRR",
+                format_accounting_percent(irr, decimals=1, zero_as_dash=False) if irr is not None else "N/A"
+            )
+
         with h2:
-            render_deal_highlight_box("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
-    
+            render_deal_highlight_box(
+                "MOIC",
+                format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A"
+            )
+
         with h3:
-            render_deal_highlight_box("Net Acres", f"{total_net_acres:,.1f}")
-    
+            render_deal_highlight_box(
+                "Net Acres",
+                format_accounting_number(total_net_acres, decimals=1)
+            )
+
         with h4:
-            render_deal_highlight_box("$/Acre Bid", f"${blended_bid:,.0f}")
+            render_deal_highlight_box(
+                "$/Acre Bid",
+                format_accounting_number(blended_bid, decimals=0, prefix="$")
+            )
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
