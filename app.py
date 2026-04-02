@@ -149,37 +149,53 @@ def inject_app_css():
         /* =========================
            PRIMARY BUTTONS (dark blue)
         ========================== */
-        div[data-testid="stButton"] button {{
+        div[data-testid="stButton"] button[kind="primary"] {{
             background-color: {BUTTON_DARK} !important;
             color: white !important;
             border: 1px solid {BUTTON_DARK} !important;
             font-weight: 700 !important;
             border-radius: 10px !important;
         }}
-
-        div[data-testid="stButton"] button:hover {{
+        
+        div[data-testid="stButton"] button[kind="primary"]:hover {{
             background-color: {BUTTON_DARK} !important;
             color: white !important;
             border: 1px solid {BUTTON_DARK} !important;
             filter: brightness(1.05) !important;
         }}
-
-        div[data-testid="stButton"] button:focus,
-        div[data-testid="stButton"] button:active {{
+        
+        div[data-testid="stButton"] button[kind="primary"]:focus,
+        div[data-testid="stButton"] button[kind="primary"]:active {{
             background-color: {BUTTON_DARK} !important;
             color: white !important;
             border: 1px solid {BUTTON_DARK} !important;
             box-shadow: none !important;
         }}
-
+        
         /* =========================
-           REFRESH TYPE CURVES BUTTON (light blue override)
+           SECONDARY BUTTONS (light blue)
         ========================== */
-        div[data-testid="stHorizontalBlock"] div[data-testid="stButton"]:nth-of-type(3) button {{
+        div[data-testid="stButton"] button[kind="secondary"] {{
             background-color: {MONTHLY_BTN} !important;
             color: #1f2d3d !important;
             border: 1px solid {MONTHLY_BTN} !important;
             font-weight: 700 !important;
+            border-radius: 10px !important;
+        }}
+        
+        div[data-testid="stButton"] button[kind="secondary"]:hover {{
+            background-color: {MONTHLY_BTN} !important;
+            color: #1f2d3d !important;
+            border: 1px solid {MONTHLY_BTN} !important;
+            filter: brightness(1.05) !important;
+        }}
+        
+        div[data-testid="stButton"] button[kind="secondary"]:focus,
+        div[data-testid="stButton"] button[kind="secondary"]:active {{
+            background-color: {MONTHLY_BTN} !important;
+            color: #1f2d3d !important;
+            border: 1px solid {MONTHLY_BTN} !important;
+            box-shadow: none !important;
         }}
 
         div[data-testid="stHorizontalBlock"] div[data-testid="stButton"]:nth-of-type(3) button:hover {{
