@@ -187,9 +187,9 @@ def inject_app_css():
         """,
         unsafe_allow_html=True,
     )
-    
-st.title("Utica Deal Model")
+
 inject_app_css()
+st.title("Utica Deal Model")
 
 @st.cache_data
 
