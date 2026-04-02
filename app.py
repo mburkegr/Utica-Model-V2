@@ -1551,7 +1551,11 @@ with col2:
 
 with col3:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-    refresh_tc_clicked = st.button("Refresh Type Curves", use_container_width=True)
+    refresh_tc_clicked = st.button(
+        "Refresh Type Curves",
+        use_container_width=True,
+        key="refresh_tc_btn"
+    )
 
 if refresh_tc_clicked:
     load_tc_names.clear()
