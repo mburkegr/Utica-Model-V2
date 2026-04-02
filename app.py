@@ -142,6 +142,102 @@ MONTHLY_BTN = "#C0D4E4"              # RGB(192, 212, 228)
 SENS_BTN = "#8AABCC"                 # RGB(138, 171, 204)
 YEAR_FILL = "#CADEEE"                # RGB(202, 222, 238)
 
+def inject_app_css():
+    st.markdown(
+        f"""
+        <style>
+        /* Main action buttons */
+        section.main div[data-testid="stButton"] > button {{
+            background-color: {BUTTON_DARK};
+            color: white;
+            border: 1px solid {BUTTON_DARK};
+            font-weight: 700;
+            border-radius: 10px;
+        }}
+
+        section.main div[data-testid="stButton"] > button:hover {{
+            background-color: {BUTTON_DARK};
+            color: white;
+            border: 1px solid {BUTTON_DARK};
+            filter: brightness(1.05);
+        }}
+
+        /* Download button */
+        section.main div[data-testid="stDownloadButton"] > button {{
+            background-color: {MONTHLY_BTN};
+            color: #1f2d3d;
+            border: 1px solid {MONTHLY_BTN};
+            font-weight: 700;
+            border-radius: 10px;
+        }}
+
+        section.main div[data-testid="stDownloadButton"] > button:hover {{
+            background-color: {MONTHLY_BTN};
+            color: #1f2d3d;
+            border: 1px solid {MONTHLY_BTN};
+            filter: brightness(1.03);
+        }}
+
+        /* Expander headers */
+        section.main div[data-testid="stExpander"] summary {{
+            border-radius: 10px;
+            font-weight: 700;
+        }}
+
+        section.main div[data-testid="stExpander"]:nth-of-type(1) summary {{
+            background-color: {MONTHLY_BTN};
+            color: #1f2d3d;
+        }}
+
+        section.main div[data-testid="stExpander"]:nth-of-type(2) summary,
+        section.main div[data-testid="stExpander"]:nth-of-type(3) summary,
+        section.main div[data-testid="stExpander"]:nth-of-type(4) summary,
+        section.main div[data-testid="stExpander"]:nth-of-type(5) summary {{
+            background-color: {SENS_BTN};
+            color: #102030;
+        }}
+
+        section.main div[data-testid="stExpander"]:nth-of-type(6) summary,
+        section.main div[data-testid="stExpander"]:nth-of-type(7) summary {{
+            background-color: {QUARTERLY_HEADER_COLOR};
+            color: white;
+        }}
+
+        /* Try to color data editor headers */
+        section.main div[data-testid="stDataEditor"] [role="columnheader"] {{
+            background: {QUARTERLY_HEADER_COLOR} !important;
+            background-color: {QUARTERLY_HEADER_COLOR} !important;
+            color: white !important;
+            font-weight: 700 !important;
+        }}
+
+        section.main div[data-testid="stDataEditor"] [role="columnheader"] * {{
+            color: white !important;
+            fill: white !important;
+            font-weight: 700 !important;
+        }}
+
+        section.main div[data-testid="stDataEditor"] thead th {{
+            background: {QUARTERLY_HEADER_COLOR} !important;
+            background-color: {QUARTERLY_HEADER_COLOR} !important;
+            color: white !important;
+            font-weight: 700 !important;
+        }}
+
+        section.main div[data-testid="stDataEditor"] thead th * {{
+            color: white !important;
+            fill: white !important;
+            font-weight: 700 !important;
+        }}
+
+        section.main div[data-testid="stDataEditor"] [role="gridcell"] {{
+            border-color: #e6e6e6 !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 @st.cache_data
 
 def load_tc_names():
