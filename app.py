@@ -599,7 +599,7 @@ def format_quarterly_output_table(df):
             else:
                 formatted.loc[idx, col] = f"${val:,.1f}"
 
-return formatted
+    return formatted
 
 QUARTERLY_HEADER_COLOR = "#4E80B1"  # RGB(78, 128, 177)
 
@@ -746,7 +746,6 @@ def build_quarterly_output_display_table(df):
     display_df = pd.DataFrame(rows)
     return display_df, row_styles
 
-
 def style_quarterly_output_table(display_df, row_styles):
     style_map = pd.Series(row_styles, index=display_df.index)
 
@@ -766,6 +765,41 @@ def style_quarterly_output_table(display_df, row_styles):
             styles = [""] * len(row)
 
         return styles
+
+    # 👇 THIS MUST BE OUTSIDE row_style
+    first_col = display_df.columns[0]
+    other_cols = list(display_df.columns[1:])
+
+    styler = (
+        display_df.style
+        .apply(row_style, axis=1)
+        .set_properties(subset=[first_col], **{
+            "text-align": "left",
+            "white-space": "pre",
+        })
+        .set_properties(subset=other_cols, **{
+            "text-align": "right",
+        })
+        .set_table_styles([
+            {
+                "selector": "thead th",
+                "props": [
+                    ("background-color", QUARTERLY_HEADER_COLOR),
+                    ("color", "white"),
+                    ("font-weight", "700"),
+                    ("text-align", "center"),
+                ],
+            },
+            {
+                "selector": "tbody td",
+                "props": [
+                    ("border", "1px solid #e6e6e6"),
+                ],
+            },
+        ], overwrite=False)
+    )
+
+    return styler
     
         first_col = display_df.columns[0]
         other_cols = list(display_df.columns[1:])
@@ -819,34 +853,7 @@ def render_deal_highlight_box(title, value):
         """,
         unsafe_allow_html=True,
     )
-    # ---------------------------
-    # Highlight base case cell
-    # ---------------------------
-    if base_x is not None and base_y is not None:
-        try:
-            x_vals_raw = list(heatmap_df.columns)
-            y_vals_raw = list(heatmap_df.index)
-
-            def find_closest_index(values, target):
-                return min(range(len(values)), key=lambda i: abs(float(values[i]) - float(target)))
-            
-            x_idx = find_closest_index(x_vals_raw, base_x)
-            y_idx = find_closest_index(y_vals_raw, base_y)
-
-            fig.add_shape(
-                type="rect",
-                x0=x_idx - 0.5,
-                x1=x_idx + 0.5,
-                y0=y_idx - 0.5,
-                y1=y_idx + 0.5,
-                line=dict(color="black", width=3),
-                fillcolor="rgba(0,0,0,0)",
-            )
-        except Exception:
-            pass
     
-    return fig
-
 # -----------------------------
 # Session state init
 # -----------------------------
