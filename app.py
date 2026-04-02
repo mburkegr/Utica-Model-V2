@@ -144,92 +144,44 @@ def inject_app_css():
     st.markdown(
         f"""
         <style>
-        /* Main action buttons */
-        section.main div[data-testid="stButton"] > button {{
-            background-color: {BUTTON_DARK};
-            color: white;
-            border: 1px solid {BUTTON_DARK};
-            font-weight: 700;
-            border-radius: 10px;
-        }}
-
-        section.main div[data-testid="stButton"] > button:hover {{
-            background-color: {BUTTON_DARK};
-            color: white;
-            border: 1px solid {BUTTON_DARK};
-            filter: brightness(1.05);
-        }}
-
-        /* Download button */
-        section.main div[data-testid="stDownloadButton"] > button {{
-            background-color: {MONTHLY_BTN};
-            color: #1f2d3d;
-            border: 1px solid {MONTHLY_BTN};
-            font-weight: 700;
-            border-radius: 10px;
-        }}
-
-        section.main div[data-testid="stDownloadButton"] > button:hover {{
-            background-color: {MONTHLY_BTN};
-            color: #1f2d3d;
-            border: 1px solid {MONTHLY_BTN};
-            filter: brightness(1.03);
-        }}
-
-        /* Expander headers */
-        section.main div[data-testid="stExpander"] summary {{
-            border-radius: 10px;
-            font-weight: 700;
-        }}
-
-        section.main div[data-testid="stExpander"]:nth-of-type(1) summary {{
-            background-color: {MONTHLY_BTN};
-            color: #1f2d3d;
-        }}
-
-        section.main div[data-testid="stExpander"]:nth-of-type(2) summary,
-        section.main div[data-testid="stExpander"]:nth-of-type(3) summary,
-        section.main div[data-testid="stExpander"]:nth-of-type(4) summary,
-        section.main div[data-testid="stExpander"]:nth-of-type(5) summary {{
-            background-color: {SENS_BTN};
-            color: #102030;
-        }}
-
-        section.main div[data-testid="stExpander"]:nth-of-type(6) summary,
-        section.main div[data-testid="stExpander"]:nth-of-type(7) summary {{
-            background-color: {QUARTERLY_HEADER_COLOR};
-            color: white;
-        }}
-
-        /* Try to color data editor headers */
-        section.main div[data-testid="stDataEditor"] [role="columnheader"] {{
-            background: {QUARTERLY_HEADER_COLOR} !important;
-            background-color: {QUARTERLY_HEADER_COLOR} !important;
+        /* Main buttons */
+        div[data-testid="stButton"] button {{
+            background-color: {BUTTON_DARK} !important;
             color: white !important;
+            border: 1px solid {BUTTON_DARK} !important;
             font-weight: 700 !important;
+            border-radius: 10px !important;
         }}
 
-        section.main div[data-testid="stDataEditor"] [role="columnheader"] * {{
+        div[data-testid="stButton"] button:hover {{
+            background-color: {BUTTON_DARK} !important;
             color: white !important;
-            fill: white !important;
-            font-weight: 700 !important;
+            border: 1px solid {BUTTON_DARK} !important;
+            filter: brightness(1.05) !important;
         }}
 
-        section.main div[data-testid="stDataEditor"] thead th {{
-            background: {QUARTERLY_HEADER_COLOR} !important;
-            background-color: {QUARTERLY_HEADER_COLOR} !important;
+        div[data-testid="stButton"] button:focus,
+        div[data-testid="stButton"] button:active {{
+            background-color: {BUTTON_DARK} !important;
             color: white !important;
-            font-weight: 700 !important;
+            border: 1px solid {BUTTON_DARK} !important;
+            box-shadow: none !important;
         }}
 
-        section.main div[data-testid="stDataEditor"] thead th * {{
-            color: white !important;
-            fill: white !important;
+        /* Download buttons */
+        div[data-testid="stDownloadButton"] button {{
+            background-color: {MONTHLY_BTN} !important;
+            color: #1f2d3d !important;
+            border: 1px solid {MONTHLY_BTN} !important;
             font-weight: 700 !important;
+            border-radius: 10px !important;
         }}
 
-        section.main div[data-testid="stDataEditor"] [role="gridcell"] {{
-            border-color: #e6e6e6 !important;
+        div[data-testid="stDownloadButton"] button:hover {{
+            background-color: {MONTHLY_BTN} !important;
+            color: #1f2d3d !important;
+            border: 1px solid {MONTHLY_BTN} !important;
+            filter: brightness(1.03) !important;
         }}
         </style>
         """,
