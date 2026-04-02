@@ -1395,11 +1395,34 @@ if (
         slot_df=slot_df,
         deal_inputs=deal_inputs,
     )
-
-    quarterly_output_display = format_quarterly_output_table(quarterly_output_df)
-
+    
+    quarterly_output_display_df, quarterly_row_styles = build_quarterly_output_display_table(quarterly_output_df)
+    quarterly_output_styler = style_quarterly_output_table(
+        quarterly_output_display_df,
+        quarterly_row_styles,
+    )
+    
     with st.expander("Quarterly Output", expanded=False):
-        st.dataframe(quarterly_output_display, use_container_width=True)
-
+        st.dataframe(
+            quarterly_output_styler,
+            use_container_width=True,
+            hide_index=True,
+        )
+    
+        st.markdown("### Deal Highlights")
+    
+        h1, h2, h3, h4 = st.columns(4)
+    
+        with h1:
+            render_deal_highlight_box("IRR", f"{irr:.1%}" if irr is not None else "N/A")
+    
+        with h2:
+            render_deal_highlight_box("MOIC", f"{moic:.2f}x" if moic is not None else "N/A")
+    
+        with h3:
+            render_deal_highlight_box("Net Acres", f"{total_net_acres:,.1f}")
+    
+        with h4:
+            render_deal_highlight_box("$/Acre Bid", f"${blended_bid:,.0f}")
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
