@@ -1375,10 +1375,9 @@ if (
     )
     
     with st.expander("Quarterly Output", expanded=False):
-        st.dataframe(
-            quarterly_output_styler,
-            use_container_width=True,
-            hide_index=True,
+        st.markdown(
+            quarterly_output_styler.to_html(),
+            unsafe_allow_html=True,
         )
     
         st.markdown("### Deal Highlights")
