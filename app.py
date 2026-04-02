@@ -599,9 +599,9 @@ def format_quarterly_output_table(df):
             else:
                 formatted.loc[idx, col] = f"${val:,.1f}"
 
-    return formatted
+return formatted
 
-    QUARTERLY_HEADER_COLOR = "#4E80B1"  # RGB(78, 128, 177)
+QUARTERLY_HEADER_COLOR = "#4E80B1"  # RGB(78, 128, 177)
 
 
 def build_quarterly_output_display_table(df):
@@ -747,25 +747,25 @@ def build_quarterly_output_display_table(df):
     return display_df, row_styles
 
 
-    def style_quarterly_output_table(display_df, row_styles):
-        style_map = pd.Series(row_styles, index=display_df.index)
-    
-        def row_style(row):
-            rtype = style_map.loc[row.name]
+def style_quarterly_output_table(display_df, row_styles):
+    style_map = pd.Series(row_styles, index=display_df.index)
+
+    def row_style(row):
+        rtype = style_map.loc[row.name]
+        styles = [""] * len(row)
+
+        if rtype == "section":
+            styles = ["font-weight: 700;"] + [""] * (len(row) - 1)
+        elif rtype == "bold":
+            styles = ["font-weight: 700;"] * len(row)
+        elif rtype == "italic":
+            styles = ["font-style: italic;"] * len(row)
+        elif rtype == "footer":
+            styles = [f"background-color: {QUARTERLY_HEADER_COLOR}; color: white; font-weight: 700;"] * len(row)
+        elif rtype == "gap":
             styles = [""] * len(row)
-    
-            if rtype == "section":
-                styles = ["font-weight: 700;"] + [""] * (len(row) - 1)
-            elif rtype == "bold":
-                styles = ["font-weight: 700;"] * len(row)
-            elif rtype == "italic":
-                styles = ["font-style: italic;"] * len(row)
-            elif rtype == "footer":
-                styles = [f"background-color: {QUARTERLY_HEADER_COLOR}; color: white; font-weight: 700;"] * len(row)
-            elif rtype == "gap":
-                styles = [""] * len(row)
-    
-            return styles
+
+        return styles
     
         first_col = display_df.columns[0]
         other_cols = list(display_df.columns[1:])
@@ -801,24 +801,24 @@ def build_quarterly_output_display_table(df):
     
         return styler
     
-    
-    def render_deal_highlight_box(title, value):
-        st.markdown(
-            f"""
-            <div style="
-                background-color: {QUARTERLY_HEADER_COLOR};
-                color: white;
-                padding: 14px 10px;
-                border-radius: 6px;
-                text-align: center;
-                font-weight: 700;
-            ">
-                <div style="font-size: 13px; margin-bottom: 6px;">{title}</div>
-                <div style="font-size: 24px;">{value}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+
+def render_deal_highlight_box(title, value):
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {QUARTERLY_HEADER_COLOR};
+            color: white;
+            padding: 14px 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 700;
+        ">
+            <div style="font-size: 13px; margin-bottom: 6px;">{title}</div>
+            <div style="font-size: 24px;">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     # ---------------------------
     # Highlight base case cell
     # ---------------------------
