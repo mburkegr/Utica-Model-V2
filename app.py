@@ -1631,14 +1631,19 @@ with col1:
 
 with col2:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-    load_slots_clicked = st.button("Load Slots", use_container_width=True)
+    load_slots_clicked = st.button(
+        "Load Slots",
+        use_container_width=True,
+        type="primary",
+    )
 
 with col3:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
     refresh_tc_clicked = st.button(
         "Refresh Type Curves",
         use_container_width=True,
-        key="refresh_tc_btn"
+        type="secondary",
+        key="refresh_tc_btn",
     )
 
 if refresh_tc_clicked:
@@ -1683,7 +1688,10 @@ slot_df = st.data_editor(
     },
 ).copy()
 
-run_model_clicked = st.button("Run Model")
+run_model_clicked = st.button(
+    "Run Model",
+    type="primary",
+)
 
 slot_df = apply_calc_unit_acres(slot_df)
 
