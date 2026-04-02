@@ -1232,18 +1232,18 @@ def build_production_profile_chart(deal_df):
     return fig
 
 
-def build_cumulative_fcf_chart(deal_df):
+def build_cumulative_fcf_chart(deal_df, slot_df):
     df = deal_df.copy()
     df["date"] = pd.to_datetime(df["date"])
 
     # Keep monthly data through 2040
     df = df[df["date"] <= pd.Timestamp("2040-12-31")].copy()
 
-    # Use monthly total cash flow
+    # Monthly total cash flow
     monthly_fcf = df.groupby("date", as_index=False)["slot_total_cash_flow"].sum()
     monthly_fcf["cum_fcf"] = monthly_fcf["slot_total_cash_flow"].cumsum() / 1000.0  # $ in thousands
 
-    # Compute payback where cumulative FCF crosses zero
+    # Payback calculation
     payback_years = None
     payback_date = None
 
@@ -1276,19 +1276,48 @@ def build_cumulative_fcf_chart(deal_df):
         hovertemplate="Date: %{x|%Y-%m-%d}<br>Cumulative FCF: %{y:,.1f}<extra></extra>",
     ))
 
+    # Zero line
     fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="gray")
 
-    if payback_date is not None and payback_years is not None:
-        fig.add_trace(go.Scatter(
-            x=[payback_date],
-            y=[0],
-            mode="markers+text",
-            text=[f"Payback = {payback_years:.1f} years"],
-            textposition="top center",
-            name="Payback",
-            hovertemplate=f"Payback Date: {payback_date:%Y-%m-%d}<br>Payback: {payback_years:.1f} years<extra></extra>",
-        ))
+    # Add vertical development bands using slot spud month / gross wells
+    slot_chart = slot_df.copy()
+    slot_chart["drilling_spud_month"] = pd.to_datetime(slot_chart["drilling_spud_month"], errors="coerce")
+    slot_chart = slot_chart[slot_chart["drilling_spud_month"] <= pd.Timestamp("2040-12-31")].copy()
 
+    if not slot_chart.empty:
+        spud_summary = (
+            slot_chart.groupby("drilling_spud_month", as_index=False)["gross_wells"]
+            .sum()
+            .sort_values("drilling_spud_month")
+        )
+
+        for _, row in spud_summary.iterrows():
+            spud_date = row["drilling_spud_month"]
+            gross_wells = row["gross_wells"]
+
+            # narrow monthly band
+            x0 = spud_date
+            x1 = spud_date + pd.offsets.MonthEnd(1)
+
+            fig.add_vrect(
+                x0=x0,
+                x1=x1,
+                fillcolor="rgba(78, 128, 177, 0.18)",
+                line_width=0,
+                layer="below",
+            )
+
+            fig.add_annotation(
+                x=spud_date + pd.Timedelta(days=12),
+                y=1.02,
+                yref="paper",
+                text=f"{gross_wells:.1f} GW",
+                showarrow=False,
+                font=dict(size=11, color="black"),
+            )
+
+    # Payback callout moved higher so it is readable
+    if payback_date is not None and payback_years is not None:
         fig.add_vline(
             x=payback_date,
             line_width=1,
@@ -1296,16 +1325,39 @@ def build_cumulative_fcf_chart(deal_df):
             line_color="gray",
         )
 
+        fig.add_annotation(
+            x=payback_date,
+            y=1.10,
+            yref="paper",
+            text=f"<b>Payback = {payback_years:.1f} years</b>",
+            showarrow=True,
+            arrowhead=2,
+            ax=0,
+            ay=25,
+            bgcolor="white",
+            bordercolor="gray",
+            font=dict(size=12, color="black"),
+        )
+
     fig.update_layout(
-        title="Cumulative Free Cash Flow",
+        title=dict(
+            text="<b>Cumulative Free Cash Flow</b>",
+            x=0.5,
+            xanchor="center",
+            font=dict(size=20, color="black"),
+        ),
         xaxis=dict(
-            title="Date",
+            title=dict(text="Date", font=dict(size=14, color="black")),
             tickformat="%Y",
             dtick="M12",
+            tickfont=dict(size=12, color="black"),
         ),
-        yaxis=dict(title="$ in Thousands"),
-        height=500,
-        margin=dict(l=40, r=40, t=70, b=40),
+        yaxis=dict(
+            title=dict(text="$ in Thousands", font=dict(size=14, color="black")),
+            tickfont=dict(size=12, color="black"),
+        ),
+        height=525,
+        margin=dict(l=50, r=40, t=95, b=45),
         plot_bgcolor="white",
         paper_bgcolor="white",
         showlegend=False,
@@ -1915,7 +1967,7 @@ if (
             unsafe_allow_html=True,
         )
 
-    cum_fcf_chart = build_cumulative_fcf_chart(deal_df)
+    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
     prod_chart = build_production_profile_chart(deal_df)
 
     with st.expander("Charts", expanded=False):
