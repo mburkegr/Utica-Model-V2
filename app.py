@@ -848,6 +848,26 @@ def build_quarterly_output_display_table(df):
 def style_quarterly_output_table(display_df, row_styles):
     style_map = pd.Series(row_styles, index=display_df.index)
 
+    first_col = display_df.columns[0]
+    data_cols = list(display_df.columns[1:])
+
+    yearly_fill = "#CADEEE"  # RGB(202, 222, 238)
+
+    quarter_cols = [
+        c for c in data_cols
+        if str(c).startswith("Q")
+    ]
+
+    yearly_cols = [
+        c for c in data_cols
+        if str(c).isdigit()
+    ]
+
+    separator_cols = [
+        c for c in data_cols
+        if str(c).strip() == ""
+    ]
+
     def row_style(row):
         rtype = style_map.loc[row.name]
         styles = [""] * len(row)
@@ -865,9 +885,6 @@ def style_quarterly_output_table(display_df, row_styles):
 
         return styles
 
-    first_col = display_df.columns[0]
-    other_cols = list(display_df.columns[1:])
-
     styler = (
         display_df.style
         .apply(row_style, axis=1)
@@ -876,14 +893,24 @@ def style_quarterly_output_table(display_df, row_styles):
             "text-align": "left",
             "white-space": "pre",
         })
-        .set_properties(subset=other_cols, **{
+        .set_properties(subset=quarter_cols, **{
             "text-align": "right",
+            "background-color": "white",
+        })
+        .set_properties(subset=yearly_cols, **{
+            "text-align": "right",
+            "background-color": yearly_fill,
+        })
+        .set_properties(subset=separator_cols, **{
+            "background-color": "white",
+            "width": "14px",
         })
         .set_table_styles([
             {
                 "selector": "table",
                 "props": [
-                    ("border-collapse", "collapse"),
+                    ("border-collapse", "separate"),
+                    ("border-spacing", "0"),
                     ("width", "100%"),
                 ],
             },
@@ -894,14 +921,14 @@ def style_quarterly_output_table(display_df, row_styles):
                     ("color", "white"),
                     ("font-weight", "700"),
                     ("text-align", "center"),
-                    ("border", "1px solid #d9d9d9"),
+                    ("border", "none"),
                     ("padding", "6px 10px"),
                 ],
             },
             {
                 "selector": "tbody td",
                 "props": [
-                    ("border", "1px solid #e6e6e6"),
+                    ("border", "none"),
                     ("padding", "6px 10px"),
                 ],
             },
@@ -922,7 +949,6 @@ def style_quarterly_output_table(display_df, row_styles):
     )
 
     return styler
-
 
 def render_deal_highlight_box(title, value):
     st.markdown(
@@ -1131,6 +1157,20 @@ slot_df_display = st.session_state["slot_df"]
 st.markdown(
     f"""
     <style>
+    /* blue title bar look above the editor */
+    div[data-testid="stDataEditor"] [role="columnheader"] {{
+        background-color: {QUARTERLY_HEADER_COLOR} !important;
+        color: white !important;
+        font-weight: 700 !important;
+        border-color: #d9d9d9 !important;
+    }}
+
+    div[data-testid="stDataEditor"] [role="columnheader"] * {{
+        color: white !important;
+        font-weight: 700 !important;
+    }}
+
+    /* fallback for some streamlit versions */
     div[data-testid="stDataEditor"] thead th {{
         background-color: {QUARTERLY_HEADER_COLOR} !important;
         color: white !important;
@@ -1143,14 +1183,13 @@ st.markdown(
         font-weight: 700 !important;
     }}
 
-    div[data-testid="stDataEditor"] tbody td {{
+    div[data-testid="stDataEditor"] [role="gridcell"] {{
         border-color: #e6e6e6 !important;
     }}
     </style>
     """,
     unsafe_allow_html=True,
 )
-
 slot_df = st.data_editor(
     slot_df_display,
     num_rows="fixed",
