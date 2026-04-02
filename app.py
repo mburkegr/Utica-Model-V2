@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 from model import run_deal_model
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
-st.title("Utica Deal Model")
 
 # -----------------------------
 # Helpers
@@ -802,14 +801,6 @@ def format_quarterly_output_table(df):
                 )
 
     return formatted
-
-
-QUARTERLY_HEADER_COLOR = "#4E80B1"   # RGB(78, 128, 177)
-BUTTON_DARK = "#2E4D6A"              # RGB(46, 77, 106)
-MONTHLY_BTN = "#C0D4E4"              # RGB(192, 212, 228)
-SENS_BTN = "#8AABCC"                 # RGB(138, 171, 204)
-YEAR_FILL = "#CADEEE"                # RGB(202, 222, 238)
-
 
 def build_quarterly_output_display_table(df):
     first_col = "$ in Thousands"
