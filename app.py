@@ -121,6 +121,20 @@ def format_display_df(df):
     display_df.columns = [pretty_column_name(col) for col in display_df.columns]
     return display_df
 
+def format_thousands_short(x, decimals=1, prefix="$", suffix="k", zero_as_dash=True, null_as_blank=True):
+    if pd.isnull(x):
+        return "" if null_as_blank else "-"
+
+    x = float(x)
+
+    if zero_as_dash and is_effectively_zero(x):
+        return "-"
+
+    x_thousands = x / 1000.0
+    abs_text = f"{abs(x_thousands):,.{decimals}f}"
+    text = f"{prefix}{abs_text}{suffix}"
+
+    return f"({text})" if x < 0 else text
 
 @st.cache_data
 def load_tc_names():
@@ -1276,7 +1290,7 @@ if (
         st.metric("Total Net Acres", format_accounting_number(total_net_acres, decimals=1))
     with col2:
         total_acquisition_cost = -deal_df["slot_asset_purchase"].sum()
-        st.metric("Acquisition Cost", format_accounting_number(total_acquisition_cost, decimals=1, prefix="$"))
+        st.metric("Acquisition Cost", format_thousands_short(total_acquisition_cost, decimals=1))
     with col3:
         st.metric("$/Acre Bid", format_accounting_number(blended_bid, decimals=0, prefix="$"))
     with col4:
