@@ -2323,6 +2323,8 @@ if (
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
 
+    st.subheader("Outputs")
+    
     quarterly_output_df = build_quarterly_output_table(
         deal_df=deal_df,
         all_slots_df=all_slots_df,
@@ -2336,6 +2338,34 @@ if (
         quarterly_row_styles,
     )
 
+    with st.expander("TC Assumptions Output", expanded=False):
+        st.markdown(tc_output_styler.to_html(), unsafe_allow_html=True)
+
+    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+    
+    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+
+    with st.expander("Charts", expanded=False):
+        chart_tab1, chart_tab2, chart_tab3 = st.tabs(
+            ["Cumulative FCF", "Production", "Scenario Matrix"]
+        )
+    
+        with chart_tab1:
+            st.plotly_chart(cum_fcf_chart, use_container_width=True)
+    
+        with chart_tab2:
+            prod_chart_view = st.radio(
+                "Production Chart View",
+                ["Stacked BOE/d", "Stream Split"],
+                horizontal=True,
+                key="prod_chart_view",
+            )
+            prod_chart = build_production_profile_chart(deal_df, chart_view=prod_chart_view)
+            st.plotly_chart(prod_chart, use_container_width=True)
+    
+        with chart_tab3:
+            st.plotly_chart(scenario_scatter_chart, use_container_width=True)
+    
     with st.expander("Quarterly Output", expanded=False):
         st.markdown(quarterly_output_styler.to_html(), unsafe_allow_html=True)
 
@@ -2369,85 +2399,46 @@ if (
         tc_output_row_styles,
     )
 
-    with st.expander("TC Assumptions Output", expanded=False):
-        st.markdown(tc_output_styler.to_html(), unsafe_allow_html=True)
-
-    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+    st.subheader("Email Draft Export")
     
-    with st.expander("Charts", expanded=False):
-        chart_tab1, chart_tab2, chart_tab3 = st.tabs(
-            ["Cumulative FCF", "Production", "Scenario Matrix"]
-        )
+    opportunity_name = st.text_input(
+        "Opportunity Name for Email Draft",
+        value="Desert Gold",
+        key="email_opportunity_name",
+    )
     
-        with chart_tab1:
-            st.plotly_chart(cum_fcf_chart, use_container_width=True)
+    prod_chart_stacked = build_production_profile_chart(
+        deal_df,
+        chart_view="Stacked BOE/d",
+    )
     
-        with chart_tab2:
-            prod_chart_view = st.radio(
-                "Production Chart View",
-                ["Stacked BOE/d", "Stream Split"],
-                horizontal=True,
-                key="prod_chart_view",
-            )
-            prod_chart = build_production_profile_chart(deal_df, chart_view=prod_chart_view)
-            st.plotly_chart(prod_chart, use_container_width=True)
+    email_html = build_email_html(
+        opportunity_name=opportunity_name,
+        deal_inputs=deal_inputs,
+        slot_df=slot_df,
+        irr=irr,
+        moic=moic,
+        tc_output_styler=tc_output_styler,
+        quarterly_output_styler=quarterly_output_styler,
+        irr_oil_bid_heatmap=irr_oil_bid_heatmap,
+        irr_gas_bid_heatmap=irr_gas_bid_heatmap,
+        irr_heatmap=irr_heatmap,
+        irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
+        cum_fcf_chart=cum_fcf_chart,
+        prod_chart_stacked=prod_chart_stacked,
+        scenario_scatter_chart=scenario_scatter_chart,
+    )
     
-        with chart_tab3:
-            st.plotly_chart(scenario_scatter_chart, use_container_width=True)
-
-        st.subheader("Email Draft Export")
+    with st.expander("Preview Email Draft", expanded=False):
+        st.components.v1.html(email_html, height=900, scrolling=True)
     
-        opportunity_name = st.text_input(
-            "Opportunity Name for Email Draft",
-            value="Desert Gold",
-            key="email_opportunity_name",
-        )
-    
-        prod_chart_stacked = build_production_profile_chart(
-            deal_df,
-            chart_view="Stacked BOE/d",
-        )
-    
-        email_html = build_email_html(
-            opportunity_name=opportunity_name,
-            deal_inputs=deal_inputs,
-            slot_df=slot_df,
-            irr=irr,
-            moic=moic,
-            tc_output_styler=tc_output_styler,
-            quarterly_output_styler=quarterly_output_styler,
-            irr_oil_bid_heatmap=irr_oil_bid_heatmap,
-            irr_gas_bid_heatmap=irr_gas_bid_heatmap,
-            irr_heatmap=irr_heatmap,
-            irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
-            cum_fcf_chart=cum_fcf_chart,
-            prod_chart_stacked=prod_chart_stacked,
-            scenario_scatter_chart=scenario_scatter_chart,
-        )
-    
-        with st.expander("Preview Email Draft", expanded=False):
-            st.components.v1.html(email_html, height=900, scrolling=True)
-    
-        st.download_button(
-            label="Download Email Draft (HTML)",
-            data=email_html,
-            file_name="utica_email_draft.html",
-            mime="text/html",
-            key="download_email_html",
-        )
-
-        import plotly.express as px
-        
-        fig = px.line(x=[1,2,3], y=[1,4,9])
-        
-        img_bytes = fig.to_image(format="png")
-        
-        st.download_button(
-            "Download Test Image",
-            data=img_bytes,
-            file_name="test.png",
-            mime="image/png"
-        )
+    st.download_button(
+        label="Download Email Draft (HTML)",
+        data=email_html,
+        file_name="utica_email_draft.html",
+        mime="text/html",
+        key="download_email_html",
+    )
 
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
