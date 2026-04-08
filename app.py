@@ -1377,7 +1377,7 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
 
     return fig
 
-def build_efficient_frontier_chart(slot_df, deal_inputs):
+def build_efficient_frontier_chart(slot_df, deal_inputs, dc_case="Base D&C"):
     base_bid = (
         deal_inputs["bid_override"]
         if deal_inputs["use_bid_override"]
@@ -1386,23 +1386,28 @@ def build_efficient_frontier_chart(slot_df, deal_inputs):
 
     bid_values = build_sensitivity_range(base_bid, 500.0, 5)
 
-    # Simple commodity scenario set
+    base_dc = (
+        float(deal_inputs["dc_override"])
+        if deal_inputs["use_dc_override"]
+        else float(slot_df["dc_costs"].mean())
+    )
+
+    if dc_case == "Low D&C":
+        dc_value = base_dc - 50.0
+    elif dc_case == "High D&C":
+        dc_value = base_dc + 50.0
+    else:
+        dc_value = base_dc
+
+    base_oil = float(deal_inputs["oil_price"])
+    base_gas = float(deal_inputs["gas_price"])
+
     scenario_defs = [
-        {
-            "name": "Downside",
-            "oil_price": max(0.0, deal_inputs["oil_price"] - 5.0),
-            "gas_price": max(0.0, deal_inputs["gas_price"] - 0.50),
-        },
-        {
-            "name": "Base",
-            "oil_price": deal_inputs["oil_price"],
-            "gas_price": deal_inputs["gas_price"],
-        },
-        {
-            "name": "Upside",
-            "oil_price": deal_inputs["oil_price"] + 5.0,
-            "gas_price": deal_inputs["gas_price"] + 0.50,
-        },
+        {"name": "Outer Low", "oil_price": max(0.0, base_oil - 10.0), "gas_price": max(0.0, base_gas - 1.00)},
+        {"name": "Inner Low", "oil_price": max(0.0, base_oil - 5.0),  "gas_price": max(0.0, base_gas - 0.50)},
+        {"name": "Base",      "oil_price": base_oil,                    "gas_price": base_gas},
+        {"name": "Inner High","oil_price": base_oil + 5.0,              "gas_price": base_gas + 0.50},
+        {"name": "Outer High","oil_price": base_oil + 10.0,             "gas_price": base_gas + 1.00},
     ]
 
     frontier_df = pd.DataFrame(index=bid_values)
@@ -1416,6 +1421,8 @@ def build_efficient_frontier_chart(slot_df, deal_inputs):
             sens_inputs["bid_override"] = float(bid)
             sens_inputs["oil_price"] = float(scenario["oil_price"])
             sens_inputs["gas_price"] = float(scenario["gas_price"])
+            sens_inputs["use_dc_override"] = True
+            sens_inputs["dc_override"] = float(dc_value)
 
             try:
                 _, _, _, _, irr, _ = run_deal_model(slot_df.copy(), sens_inputs)
@@ -1427,34 +1434,59 @@ def build_efficient_frontier_chart(slot_df, deal_inputs):
 
     fig = go.Figure()
 
-    # Downside line (hidden in legend fill setup)
+    # Outer band
     fig.add_trace(
         go.Scatter(
             x=frontier_df.index,
-            y=frontier_df["Downside"],
+            y=frontier_df["Outer Low"],
             mode="lines",
-            line=dict(color="rgba(158, 202, 225, 0.2)", width=1),
-            hovertemplate="Bid: $%{x:,.0f}<br>Downside IRR: %{y:.1%}<extra></extra>",
-            name="Downside",
+            line=dict(color="rgba(191, 214, 234, 0.15)", width=1),
+            hovertemplate="Bid: $%{x:,.0f}<br>Outer Low IRR: %{y:.1%}<extra></extra>",
+            name="Pricing Band ±2",
             showlegend=False,
         )
     )
 
-    # Upside line with fill down to downside
     fig.add_trace(
         go.Scatter(
             x=frontier_df.index,
-            y=frontier_df["Upside"],
+            y=frontier_df["Outer High"],
             mode="lines",
-            line=dict(color="rgba(158, 202, 225, 0.2)", width=1),
+            line=dict(color="rgba(191, 214, 234, 0.15)", width=1),
             fill="tonexty",
-            fillcolor="rgba(78, 128, 177, 0.20)",
-            hovertemplate="Bid: $%{x:,.0f}<br>Upside IRR: %{y:.1%}<extra></extra>",
-            name="Pricing Range",
+            fillcolor="rgba(191, 214, 234, 0.45)",
+            hovertemplate="Bid: $%{x:,.0f}<br>Outer High IRR: %{y:.1%}<extra></extra>",
+            name="Pricing Band ±2 Steps",
         )
     )
 
-    # Base case line
+    # Inner band
+    fig.add_trace(
+        go.Scatter(
+            x=frontier_df.index,
+            y=frontier_df["Inner Low"],
+            mode="lines",
+            line=dict(color="rgba(78, 128, 177, 0.20)", width=1),
+            hovertemplate="Bid: $%{x:,.0f}<br>Inner Low IRR: %{y:.1%}<extra></extra>",
+            name="Pricing Band ±1",
+            showlegend=False,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=frontier_df.index,
+            y=frontier_df["Inner High"],
+            mode="lines",
+            line=dict(color="rgba(78, 128, 177, 0.20)", width=1),
+            fill="tonexty",
+            fillcolor="rgba(78, 128, 177, 0.30)",
+            hovertemplate="Bid: $%{x:,.0f}<br>Inner High IRR: %{y:.1%}<extra></extra>",
+            name="Pricing Band ±1 Step",
+        )
+    )
+
+    # Base line
     fig.add_trace(
         go.Scatter(
             x=frontier_df.index,
@@ -1463,7 +1495,7 @@ def build_efficient_frontier_chart(slot_df, deal_inputs):
             line=dict(color="#1f4e79", width=3),
             marker=dict(size=7, color="#1f4e79"),
             hovertemplate="Bid: $%{x:,.0f}<br>Base IRR: %{y:.1%}<extra></extra>",
-            name="Base Case",
+            name="Base Pricing",
         )
     )
 
@@ -1482,15 +1514,15 @@ def build_efficient_frontier_chart(slot_df, deal_inputs):
                 )
             )
 
-    dc_label = (
-        f"${deal_inputs['dc_override']:,.0f}/ft"
-        if deal_inputs["use_dc_override"]
-        else f"${float(slot_df['dc_costs'].mean()):,.0f}/ft avg"
-    )
     tc_risk_label = f"{float(slot_df['tc_risk'].mean()):.0%}"
 
     fig.update_layout(
-        title=f"IRR Efficient Frontier<br><sup>D&C: {dc_label} | TC Risk: {tc_risk_label} | Pricing band = downside to upside</sup>",
+        title=(
+            "IRR Efficient Frontier"
+            f"<br><sup>D&C Case: {dc_case} (${dc_value:,.0f}/ft) | "
+            f"TC Risk: {tc_risk_label} | "
+            "Inner band = ±1 price step | Outer band = ±2 price steps</sup>"
+        ),
         xaxis=dict(
             title="$/Acre Bid",
             tickprefix="$",
@@ -2127,9 +2159,20 @@ if (
             st.plotly_chart(prod_chart, use_container_width=True)
     
         with chart_tab3:
+            dc_case = st.radio(
+                "D&C Case",
+                ["Low D&C", "Base D&C", "High D&C"],
+                horizontal=True,
+                key="frontier_dc_case",
+            )
+        
+            frontier_chart = build_efficient_frontier_chart(
+                slot_df,
+                deal_inputs,
+                dc_case=dc_case,
+            )
+        
             st.plotly_chart(frontier_chart, use_container_width=True)
-    
-
 
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
