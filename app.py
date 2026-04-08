@@ -1224,9 +1224,20 @@ def build_production_profile_chart(deal_df, chart_view="Stacked BOE/d"):
         chart_title = "Net Production Stream Split (BOE/d)"
 
     fig.update_layout(
-        title=chart_title,
-        xaxis=dict(title="Date", tickformat="%Y", dtick="M12"),
-        yaxis=dict(title="Net Production (BOE/d)"),
+        title=dict(
+            text=chart_title,
+            font=dict(color="black"),
+        ),
+        xaxis=dict(
+            title=dict(text="Date", font=dict(color="black")),
+            tickformat="%Y",
+            dtick="M12",
+            tickfont=dict(color="black"),
+        ),
+        yaxis=dict(
+            title=dict(text="Net Production (BOE/d)", font=dict(color="black")),
+            tickfont=dict(color="black"),
+        ),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         height=500,
         margin=dict(l=40, r=40, t=70, b=40),
@@ -1469,6 +1480,11 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
+    tc_jitter = {
+        0.90: -50,
+        1.00: 0,
+        1.10: 50,
+    }
     
     for pricing_name in ["Downside", "Base", "Upside"]:
         panel_df = chart_df[chart_df["pricing_case"] == pricing_name].copy()
@@ -1484,7 +1500,10 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     
             fig.add_trace(
                 go.Scatter(
-                    x=dc_df["bid"],
+                    x=[
+                        b + tc_jitter.get(round(float(r), 2), 0)
+                        for b, r in zip(dc_df["bid"], dc_df["tc_risk"])
+                    ],                    
                     y=dc_df["irr"],
                     mode="markers",
                     name=dc_label_map[dc_case],
@@ -1605,16 +1624,27 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
-            orientation="h",
+            orientation="v",
             yanchor="top",
-            y=-0.18,
+            y=-0.05,
             xanchor="center",
             x=0.5,
-            title_text="",
-            tracegroupgap=12,
+            tracegroupgap=10,
         ),
     )
-
+    
+    fig.update_xaxes(
+        tickfont=dict(color="black"),
+        title_font=dict(color="black"),
+    )
+    
+    fig.update_yaxes(
+        tickfont=dict(color="black"),
+        title_font=dict(color="black"),
+    )
+    
+    fig.update_annotations(font=dict(color="black"))
+    
     return fig
 # -----------------------------
 # Session state init
