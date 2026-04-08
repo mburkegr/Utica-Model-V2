@@ -1,14 +1,15 @@
 import os
-import streamlit as st
-import pandas as pd
 from datetime import date
 from io import BytesIO
 
+import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
 from model import run_deal_model
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
+
 
 # -----------------------------
 # Helpers
@@ -18,15 +19,12 @@ def pretty_column_name(col):
         "date": "Date",
         "slot_id": "Slot ID",
         "tc_name": "Type Curve",
-
         "slot_net_oil_production": "Net Oil Production",
         "slot_net_gas_production": "Net Gas Production",
         "slot_net_ngl_production": "Net NGL Production",
-
         "slot_oil_revenue": "Net Oil Revenue",
         "slot_gas_revenue": "Net Gas Revenue",
         "slot_ngl_revenue": "Net NGL Revenue",
-
         "slot_total_revenue": "Total Revenue",
         "slot_loe": "Total LOE",
         "slot_tax": "Total Tax",
@@ -37,7 +35,6 @@ def pretty_column_name(col):
         "slot_total_cash_flow": "Total Cash Flow",
         "cum_total_cf": "Cumulative Total Cash Flow",
     }
-
     return name_map.get(col, col.replace("_", " ").title())
 
 
@@ -120,7 +117,15 @@ def format_display_df(df):
     display_df.columns = [pretty_column_name(col) for col in display_df.columns]
     return display_df
 
-def format_thousands_short(x, decimals=1, prefix="$", suffix="k", zero_as_dash=True, null_as_blank=True):
+
+def format_thousands_short(
+    x,
+    decimals=1,
+    prefix="$",
+    suffix="k",
+    zero_as_dash=True,
+    null_as_blank=True,
+):
     if pd.isnull(x):
         return "" if null_as_blank else "-"
 
@@ -135,20 +140,17 @@ def format_thousands_short(x, decimals=1, prefix="$", suffix="k", zero_as_dash=T
 
     return f"({text})" if x < 0 else text
 
-QUARTERLY_HEADER_COLOR = "#4E80B1"   # RGB(78, 128, 177)
-BUTTON_DARK = "#2E4D6A"              # RGB(46, 77, 106)
-MONTHLY_BTN = "#C0D4E4"              # RGB(192, 212, 228)
-SENS_BTN = "#8AABCC"                 # RGB(138, 171, 204)
-YEAR_FILL = "#CADEEE"                # RGB(202, 222, 238)
+
+QUARTERLY_HEADER_COLOR = "#4E80B1"
+BUTTON_DARK = "#2E4D6A"
+MONTHLY_BTN = "#C0D4E4"
+YEAR_FILL = "#CADEEE"
+
 
 def inject_app_css():
     st.markdown(
         f"""
         <style>
-
-        /* =========================
-           PRIMARY BUTTONS (dark blue)
-        ========================== */
         div[data-testid="stButton"] button[kind="primary"] {{
             background-color: {BUTTON_DARK} !important;
             color: white !important;
@@ -156,25 +158,17 @@ def inject_app_css():
             font-weight: 700 !important;
             border-radius: 10px !important;
         }}
-        
-        div[data-testid="stButton"] button[kind="primary"]:hover {{
-            background-color: {BUTTON_DARK} !important;
-            color: white !important;
-            border: 1px solid {BUTTON_DARK} !important;
-            filter: brightness(1.05) !important;
-        }}
-        
+
+        div[data-testid="stButton"] button[kind="primary"]:hover,
         div[data-testid="stButton"] button[kind="primary"]:focus,
         div[data-testid="stButton"] button[kind="primary"]:active {{
             background-color: {BUTTON_DARK} !important;
             color: white !important;
             border: 1px solid {BUTTON_DARK} !important;
             box-shadow: none !important;
+            filter: brightness(1.05) !important;
         }}
-        
-        /* =========================
-           SECONDARY BUTTONS (light blue)
-        ========================== */
+
         div[data-testid="stButton"] button[kind="secondary"] {{
             background-color: {MONTHLY_BTN} !important;
             color: #1f2d3d !important;
@@ -182,30 +176,17 @@ def inject_app_css():
             font-weight: 700 !important;
             border-radius: 10px !important;
         }}
-        
-        div[data-testid="stButton"] button[kind="secondary"]:hover {{
-            background-color: {MONTHLY_BTN} !important;
-            color: #1f2d3d !important;
-            border: 1px solid {MONTHLY_BTN} !important;
-            filter: brightness(1.05) !important;
-        }}
-        
+
+        div[data-testid="stButton"] button[kind="secondary"]:hover,
         div[data-testid="stButton"] button[kind="secondary"]:focus,
         div[data-testid="stButton"] button[kind="secondary"]:active {{
             background-color: {MONTHLY_BTN} !important;
             color: #1f2d3d !important;
             border: 1px solid {MONTHLY_BTN} !important;
             box-shadow: none !important;
-        }}
-
-        div[data-testid="stHorizontalBlock"] div[data-testid="stButton"]:nth-of-type(3) button:hover {{
-            background-color: {MONTHLY_BTN} !important;
             filter: brightness(1.05) !important;
         }}
 
-        /* =========================
-           DOWNLOAD BUTTON (monthly data)
-        ========================== */
         div[data-testid="stDownloadButton"] button {{
             background-color: {MONTHLY_BTN} !important;
             color: #1f2d3d !important;
@@ -219,61 +200,22 @@ def inject_app_css():
             filter: brightness(1.03) !important;
         }}
 
-        /* =========================
-           EXPANDERS
-        ========================== */
-
-        /* Base style */
         div[data-testid="stExpander"] summary {{
+            background-color: {QUARTERLY_HEADER_COLOR} !important;
+            color: white !important;
             border-radius: 10px !important;
             font-weight: 700 !important;
             padding: 8px 12px !important;
         }}
 
-        /* Monthly Data */
-        div[data-testid="stExpander"]:nth-of-type(1) summary {{
-            background-color: {MONTHLY_BTN} !important;
-            color: #1f2d3d !important;
-        }}
-
-        /* Sensitivities */
-        div[data-testid="stExpander"]:nth-of-type(2) summary,
-        div[data-testid="stExpander"]:nth-of-type(3) summary,
-        div[data-testid="stExpander"]:nth-of-type(4) summary,
-        div[data-testid="stExpander"]:nth-of-type(5) summary {{
-            background-color: {SENS_BTN} !important;
-            color: #102030 !important;
-        }}
-
-        /* Quarterly + TC + Charts */
-        div[data-testid="stExpander"]:nth-of-type(6) summary,
-        div[data-testid="stExpander"]:nth-of-type(7) summary,
-        div[data-testid="stExpander"]:nth-of-type(8) summary {{
-            background-color: {QUARTERLY_HEADER_COLOR} !important;
-            color: white !important;
-        }}
-
-        /* =========================
-           DATA EDITOR HEADER
-        ========================== */
-        div[data-testid="stDataEditor"] [role="columnheader"] {{
-            background-color: {QUARTERLY_HEADER_COLOR} !important;
-            color: white !important;
-            font-weight: 700 !important;
-        }}
-
-        div[data-testid="stDataEditor"] [role="columnheader"] * {{
-            color: white !important;
-            fill: white !important;
-            font-weight: 700 !important;
-        }}
-
+        div[data-testid="stDataEditor"] [role="columnheader"],
         div[data-testid="stDataEditor"] thead th {{
             background-color: {QUARTERLY_HEADER_COLOR} !important;
             color: white !important;
             font-weight: 700 !important;
         }}
 
+        div[data-testid="stDataEditor"] [role="columnheader"] *,
         div[data-testid="stDataEditor"] thead th * {{
             color: white !important;
             fill: white !important;
@@ -283,16 +225,17 @@ def inject_app_css():
         div[data-testid="stDataEditor"] [role="gridcell"] {{
             border-color: #e6e6e6 !important;
         }}
-
         </style>
         """,
         unsafe_allow_html=True,
     )
 
+
 inject_app_css()
 st.title("Utica Deal Model")
 
-@st.cache_data
+
+@st.cache_data(show_spinner=False)
 def load_tc_names(file_mtime):
     tc_metadata = pd.read_excel("type_curve_library.xlsx", sheet_name="tc_metadata")
     tc_metadata["tc_name"] = tc_metadata["tc_name"].astype(str).str.strip()
@@ -305,33 +248,36 @@ def next_month_start():
         return date(today.year + 1, 1, 1)
     return date(today.year, today.month + 1, 1)
 
+
 def build_slot_template(num_slots):
     rows = []
     for i in range(1, num_slots + 1):
-        rows.append({
-            "slot_id": i,
-            "tc_name": "Choose TC",
-            "gross_wells": 2.0,
-            "net_acres": 28.6,
-            "unit_acres": 800.0,
-            "use_calc_unit_acres": False,
-            "pct_unitized": 0.90,
-            "drilling_spud_month": next_month_start(),
-            "flowback_delay": 4,
-            "net_revenue_interest": 0.80,
-            "lateral_length": 10000,
-            "dc_costs": 750.0,
-            "tc_risk": 1.00,
-            "bid_per_acre": 8000.0,
-            "oil_diff": -10.00,
-            "gas_diff": -3.00,
-            "ngl_diff": 0.00,
-            "oil_opex_bbl": 1.78,
-            "gas_opex_mcf": 0.04,
-            "ngl_opex": 2.50,
-            "fixed_loe": 3534.0,
-            "ngl_yield": 5.2,
-        })
+        rows.append(
+            {
+                "slot_id": i,
+                "tc_name": "Choose TC",
+                "gross_wells": 2.0,
+                "net_acres": 28.6,
+                "unit_acres": 800.0,
+                "use_calc_unit_acres": False,
+                "pct_unitized": 0.90,
+                "drilling_spud_month": next_month_start(),
+                "flowback_delay": 4,
+                "net_revenue_interest": 0.80,
+                "lateral_length": 10000,
+                "dc_costs": 750.0,
+                "tc_risk": 1.00,
+                "bid_per_acre": 8000.0,
+                "oil_diff": -10.00,
+                "gas_diff": -3.00,
+                "ngl_diff": 0.00,
+                "oil_opex_bbl": 1.78,
+                "gas_opex_mcf": 0.04,
+                "ngl_opex": 2.50,
+                "fixed_loe": 3534.0,
+                "ngl_yield": 5.2,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -378,6 +324,7 @@ def build_sensitivity_range(base_value, step, steps_each_way=3):
     return [base_value + step * i for i in range(-steps_each_way, steps_each_way + 1)]
 
 
+@st.cache_data(show_spinner=False)
 def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
     dc_values = build_sensitivity_range(base_dc, 50.0, 3)
     bid_values = build_sensitivity_range(base_bid, 500.0, 3)
@@ -404,6 +351,7 @@ def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
     return irr_table, moic_table
 
 
+@st.cache_data(show_spinner=False)
 def run_oil_bid_sensitivity(slot_df, deal_inputs, oil_values, bid_values):
     irr_table = pd.DataFrame(index=bid_values, columns=oil_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=oil_values, dtype=float)
@@ -426,6 +374,7 @@ def run_oil_bid_sensitivity(slot_df, deal_inputs, oil_values, bid_values):
     return irr_table, moic_table
 
 
+@st.cache_data(show_spinner=False)
 def run_gas_bid_sensitivity(slot_df, deal_inputs, gas_values, bid_values):
     irr_table = pd.DataFrame(index=bid_values, columns=gas_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=gas_values, dtype=float)
@@ -448,6 +397,7 @@ def run_gas_bid_sensitivity(slot_df, deal_inputs, gas_values, bid_values):
     return irr_table, moic_table
 
 
+@st.cache_data(show_spinner=False)
 def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values):
     irr_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
@@ -488,12 +438,11 @@ def build_heatmap(
     def format_axis_value(v, fmt):
         if fmt == "dollar":
             return f"${int(v):,}" if float(v).is_integer() else f"${v:,.2f}"
-        elif fmt == "percent":
+        if fmt == "percent":
             return f"{v:.0%}"
-        elif fmt == "float2":
+        if fmt == "float2":
             return f"{v:.2f}"
-        else:
-            return str(v)
+        return str(v)
 
     x_vals = [format_axis_value(x, x_format) for x in heatmap_df.columns]
     y_vals = [format_axis_value(y, y_format) for y in heatmap_df.index]
@@ -520,7 +469,6 @@ def build_heatmap(
             [high_norm, "rgb(214,232,202)"],
             [1.00, "rgb(214,232,202)"],
         ]
-
     elif metric == "moic":
         text_vals = heatmap_df.map(lambda x: f"{x:.2f}x" if pd.notnull(x) else "")
         zmin = min(0.0, float(heatmap_df.min().min()))
@@ -563,17 +511,8 @@ def build_heatmap(
 
     fig.update_layout(
         title=title,
-        xaxis=dict(
-            title=x_title,
-            side="top",
-            type="category",
-            automargin=True,
-        ),
-        yaxis=dict(
-            title=y_title,
-            type="category",
-            automargin=True,
-        ),
+        xaxis=dict(title=x_title, side="top", type="category", automargin=True),
+        yaxis=dict(title=y_title, type="category", automargin=True),
         margin=dict(l=90, r=20, t=60, b=50),
         height=360,
     )
@@ -584,7 +523,10 @@ def build_heatmap(
             y_vals_raw = list(heatmap_df.index)
 
             def find_closest_index(values, target):
-                return min(range(len(values)), key=lambda i: abs(float(values[i]) - float(target)))
+                return min(
+                    range(len(values)),
+                    key=lambda i: abs(float(values[i]) - float(target)),
+                )
 
             x_idx = find_closest_index(x_vals_raw, base_x)
             y_idx = find_closest_index(y_vals_raw, base_y)
@@ -617,22 +559,19 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
 
     deal["quarter_label"] = "Q" + deal["date"].dt.quarter.astype(str) + " " + deal["date"].dt.strftime("%y")
     deal["year_label"] = deal["date"].dt.year.astype(str)
-    
+
     quarter_order = [
         "Q1 26", "Q2 26", "Q3 26", "Q4 26",
         "Q1 27", "Q2 27", "Q3 27", "Q4 27",
     ]
-    
     year_order = [str(y) for y in range(2026, 2034)]
 
     def quarter_days_from_label(q_label):
         q_num = int(q_label[1])
         year = 2000 + int(q_label[-2:])
         quarter_start_month = {1: 1, 2: 4, 3: 7, 4: 10}[q_num]
-
         start = pd.Timestamp(year=year, month=quarter_start_month, day=1)
         end = start + pd.offsets.QuarterEnd(0)
-
         return (end - start).days + 1
 
     def year_days_from_label(y_label):
@@ -641,17 +580,8 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
         end = pd.Timestamp(year=year, month=12, day=31)
         return (end - start).days + 1
 
-    q_days = pd.Series(
-        {q: quarter_days_from_label(q) for q in quarter_order},
-        index=quarter_order,
-        dtype=float,
-    )
-
-    y_days = pd.Series(
-        {y: year_days_from_label(y) for y in year_order},
-        index=year_order,
-        dtype=float,
-    )
+    q_days = pd.Series({q: quarter_days_from_label(q) for q in quarter_order}, index=quarter_order, dtype=float)
+    y_days = pd.Series({y: year_days_from_label(y) for y in year_order}, index=year_order, dtype=float)
 
     q = deal.groupby("quarter_label").sum(numeric_only=True).reindex(quarter_order)
     y = deal.groupby("year_label").sum(numeric_only=True).reindex(year_order)
@@ -663,13 +593,13 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
     unit_acres_final = np.where(
         slot_metrics["use_calc_unit_acres"].fillna(False),
         slot_metrics["gross_wells"] * slot_metrics["lateral_length"] / 50.0,
-        slot_metrics["unit_acres"]
+        slot_metrics["unit_acres"],
     )
 
     working_interest = np.where(
         unit_acres_final != 0,
         (slot_metrics["net_acres"] / unit_acres_final) * slot_metrics["pct_unitized"],
-        0.0
+        0.0,
     )
 
     net_wells_calc = working_interest * slot_metrics["gross_wells"]
@@ -794,87 +724,18 @@ def build_quarterly_output_table(deal_df, all_slots_df, slot_df, deal_inputs):
     return final
 
 
-def format_quarterly_output_table(df):
-    formatted = df.copy().astype(object)
-
-    pct_rows = {
-        "Realized Pricing - NGL (% of WTI)",
-    }
-
-    dollar_per_unit_rows = {
-        "Taxes / Mcfe",
-        "LOE / Mcfe",
-        "Promote / Mcfe",
-    }
-
-    price_rows = {
-        "Assumed Index Pricing - Crude Oil",
-        "Assumed Index Pricing - Natural Gas",
-        "Realized Pricing - Crude Oil",
-        "Realized Pricing - Natural Gas",
-    }
-
-    production_rows = {
-        "Production - Crude Oil",
-        "Production - NGL's",
-        "Production - Natural Gas",
-        "Production - Total (Mcfe/d)",
-        "Gross Wells Spud",
-        "Net Wells Spud",
-    }
-
-    for idx in formatted.index:
-        for col in formatted.columns:
-            val = formatted.loc[idx, col]
-
-            if col == " ":
-                formatted.loc[idx, col] = ""
-            elif pd.isnull(val):
-                formatted.loc[idx, col] = "-"
-            elif idx in pct_rows:
-                formatted.loc[idx, col] = format_accounting_percent(
-                    val, decimals=0, null_as_blank=False
-                )
-            elif idx in dollar_per_unit_rows:
-                formatted.loc[idx, col] = format_accounting_number(
-                    val, decimals=2, prefix="$", null_as_blank=False
-                )
-            elif idx in price_rows:
-                formatted.loc[idx, col] = format_accounting_number(
-                    val, decimals=2, prefix="$", null_as_blank=False
-                )
-            elif idx in production_rows:
-                formatted.loc[idx, col] = format_accounting_production(
-                    val, null_as_blank=False
-                )
-            else:
-                formatted.loc[idx, col] = format_accounting_number(
-                    val, decimals=1, prefix="$", null_as_blank=False
-                )
-
-    return formatted
-
 def build_quarterly_output_display_table(df):
     first_col = "$ in Thousands"
     data_cols = list(df.columns)
 
-    pct_rows = {
-        "Realized Pricing - NGL (% of WTI)",
-    }
-
-    dollar_per_unit_rows = {
-        "Taxes / Mcfe",
-        "LOE / Mcfe",
-        "Promote / Mcfe",
-    }
-
+    pct_rows = {"Realized Pricing - NGL (% of WTI)"}
+    dollar_per_unit_rows = {"Taxes / Mcfe", "LOE / Mcfe", "Promote / Mcfe"}
     price_rows = {
         "Assumed Index Pricing - Crude Oil",
         "Assumed Index Pricing - Natural Gas",
         "Realized Pricing - Crude Oil",
         "Realized Pricing - Natural Gas",
     }
-
     production_rows = {
         "Production - Crude Oil",
         "Production - NGL's",
@@ -894,14 +755,13 @@ def build_quarterly_output_display_table(df):
 
         if source_row in pct_rows:
             return format_accounting_percent(val, decimals=0)
-        elif source_row in dollar_per_unit_rows:
+        if source_row in dollar_per_unit_rows:
             return format_accounting_number(val, decimals=2, prefix="$")
-        elif source_row in price_rows:
+        if source_row in price_rows:
             return format_accounting_number(val, decimals=2, prefix="$")
-        elif source_row in production_rows:
+        if source_row in production_rows:
             return format_accounting_production(val)
-        else:
-            return format_accounting_number(val, decimals=1, prefix="$")
+        return format_accounting_number(val, decimals=1, prefix="$")
 
     rows = []
     row_styles = []
@@ -941,8 +801,8 @@ def build_quarterly_output_display_table(df):
 
     add_gap()
 
-    add_data("Gross Wells Spud", "Gross Wells Spud", indent=False)
-    add_data("Net Wells Spud", "Net Wells Spud", indent=False)
+    add_data("Gross Wells Spud", "Gross Wells Spud")
+    add_data("Net Wells Spud", "Net Wells Spud")
 
     add_gap()
 
@@ -950,7 +810,7 @@ def build_quarterly_output_display_table(df):
     add_data("Crude Oil", "Production - Crude Oil", indent=True)
     add_data("Natural Gas", "Production - Natural Gas", indent=True)
     add_data("NGL's", "Production - NGL's", indent=True)
-    add_data("Total (Mcfe/d)", "Production - Total (Mcfe/d)", indent=False, style="bold")
+    add_data("Total (Mcfe/d)", "Production - Total (Mcfe/d)", style="bold")
 
     add_gap()
 
@@ -958,7 +818,7 @@ def build_quarterly_output_display_table(df):
     add_data("Crude Oil", "Revenues - Crude Oil", indent=True)
     add_data("Natural Gas", "Revenues - Natural Gas", indent=True)
     add_data("NGL's", "Revenues - NGL's", indent=True)
-    add_data("Total", "Revenues - Total", indent=False)
+    add_data("Total", "Revenues - Total")
 
     add_gap()
 
@@ -966,35 +826,36 @@ def build_quarterly_output_display_table(df):
     add_data("Taxes", "Operating Expenses - Taxes", indent=True)
     add_data("LOE", "Operating Expenses - LOE", indent=True)
     add_data("Dale Promote", "Operating Expenses - Dale Promote", indent=True)
-    add_data("Total", "Operating Expenses - Total Opex", indent=False)
+    add_data("Total", "Operating Expenses - Total Opex")
 
     add_gap()
 
-    add_data("Taxes / Mcfe", "Taxes / Mcfe", indent=False, style="italic")
-    add_data("LOE / Mcfe", "LOE / Mcfe", indent=False, style="italic")
-    add_data("Promote / Mcfe", "Promote / Mcfe", indent=False, style="italic")
+    add_data("Taxes / Mcfe", "Taxes / Mcfe", style="italic")
+    add_data("LOE / Mcfe", "LOE / Mcfe", style="italic")
+    add_data("Promote / Mcfe", "Promote / Mcfe", style="italic")
 
     add_gap()
 
-    add_data("EBITDA", "EBITDA", indent=False, style="bold")
+    add_data("EBITDA", "EBITDA", style="bold")
 
     add_gap()
 
     add_section("Capital Expenditures")
     add_data("D&C", "Capital Expenditures - D&C", indent=True)
     add_data("Acquisition", "Capital Expenditures - Acquisition", indent=True)
-    add_data("Total", "Capital Expenditures - Total", indent=False)
+    add_data("Total", "Capital Expenditures - Total")
 
     add_gap()
 
-    add_data("Free Cash Flow", "Free Cash Flow", indent=False, style="bold")
+    add_data("Free Cash Flow", "Free Cash Flow", style="bold")
 
     add_gap()
 
-    add_data("Cumulative FCF", "Cumulative FCF", indent=False, style="footer")
+    add_data("Cumulative FCF", "Cumulative FCF", style="footer")
 
     display_df = pd.DataFrame(rows)
     return display_df, row_styles
+
 
 def style_quarterly_output_table(display_df, row_styles):
     style_map = pd.Series(row_styles, index=display_df.index)
@@ -1023,7 +884,7 @@ def style_quarterly_output_table(display_df, row_styles):
 
         return styles
 
-    styler = (
+    return (
         display_df.style
         .apply(row_style, axis=1)
         .hide(axis="index")
@@ -1080,9 +941,7 @@ def style_quarterly_output_table(display_df, row_styles):
             },
             {
                 "selector": "tbody td:not(.col0)",
-                "props": [
-                    ("text-align", "right"),
-                ],
+                "props": [("text-align", "right")],
             },
             {
                 "selector": f"tbody tr:nth-child({len(display_df)}) td",
@@ -1095,7 +954,6 @@ def style_quarterly_output_table(display_df, row_styles):
         ], overwrite=False)
     )
 
-    return styler
 
 def build_tc_assumptions_output_display_table(slot_df):
     df = slot_df.copy()
@@ -1104,7 +962,6 @@ def build_tc_assumptions_output_display_table(slot_df):
         return pd.DataFrame({"TC Assumptions": []}), []
 
     df["drilling_spud_month"] = pd.to_datetime(df["drilling_spud_month"], errors="coerce")
-
     display_cols = [f"Slot {int(s)}" for s in df["slot_id"]]
 
     rows = []
@@ -1199,7 +1056,7 @@ def style_tc_assumptions_output_table(display_df, row_styles):
 
         return styles
 
-    styler = (
+    return (
         display_df.style
         .apply(row_style, axis=1)
         .hide(axis="index")
@@ -1249,7 +1106,6 @@ def style_tc_assumptions_output_table(display_df, row_styles):
         ], overwrite=False)
     )
 
-    return styler
 
 def render_deal_highlight_box(title, value):
     st.markdown(
@@ -1269,11 +1125,10 @@ def render_deal_highlight_box(title, value):
         unsafe_allow_html=True,
     )
 
+
 def build_production_profile_chart(deal_df):
     df = deal_df.copy()
     df["date"] = pd.to_datetime(df["date"])
-
-    # Limit chart through 2040-12-31
     df = df[df["date"] <= pd.Timestamp("2040-12-31")].copy()
 
     fig = go.Figure()
@@ -1307,19 +1162,9 @@ def build_production_profile_chart(deal_df):
 
     fig.update_layout(
         title="Production Profile",
-        xaxis=dict(
-            title="Date",
-            tickformat="%Y",
-            dtick="M12",
-        ),
+        xaxis=dict(title="Date", tickformat="%Y", dtick="M12"),
         yaxis=dict(title="Net Production"),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0,
-        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         height=500,
         margin=dict(l=40, r=40, t=70, b=40),
         plot_bgcolor="white",
@@ -1335,15 +1180,11 @@ def build_production_profile_chart(deal_df):
 def build_cumulative_fcf_chart(deal_df, slot_df):
     df = deal_df.copy()
     df["date"] = pd.to_datetime(df["date"])
-
-    # Keep monthly data through 2040
     df = df[df["date"] <= pd.Timestamp("2040-12-31")].copy()
 
-    # Monthly total cash flow
     monthly_fcf = df.groupby("date", as_index=False)["slot_total_cash_flow"].sum()
-    monthly_fcf["cum_fcf"] = monthly_fcf["slot_total_cash_flow"].cumsum() / 1000.0  # $ in thousands
+    monthly_fcf["cum_fcf"] = monthly_fcf["slot_total_cash_flow"].cumsum() / 1000.0
 
-    # Payback calculation
     payback_years = None
     payback_date = None
 
@@ -1355,11 +1196,7 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             prev_date = monthly_fcf.loc[i - 1, "date"]
             curr_date = monthly_fcf.loc[i, "date"]
 
-            if curr_val == prev_val:
-                frac = 0
-            else:
-                frac = (0 - prev_val) / (curr_val - prev_val)
-
+            frac = 0 if curr_val == prev_val else (0 - prev_val) / (curr_val - prev_val)
             payback_date = prev_date + (curr_date - prev_date) * frac
             start_date = monthly_fcf.loc[0, "date"]
             payback_years = (payback_date - start_date).days / 365.25
@@ -1376,10 +1213,8 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
         hovertemplate="Date: %{x|%Y-%m-%d}<br>Cumulative FCF: %{y:,.1f}<extra></extra>",
     ))
 
-    # Zero line
     fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="gray")
 
-    # Add vertical development bands using slot spud month / gross wells
     slot_chart = slot_df.copy()
     slot_chart["drilling_spud_month"] = pd.to_datetime(slot_chart["drilling_spud_month"], errors="coerce")
     slot_chart = slot_chart[slot_chart["drilling_spud_month"] <= pd.Timestamp("2040-12-31")].copy()
@@ -1395,7 +1230,6 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             spud_date = row["drilling_spud_month"]
             gross_wells = row["gross_wells"]
 
-            # narrow monthly band
             x0 = spud_date
             x1 = spud_date + pd.offsets.MonthEnd(1)
 
@@ -1416,15 +1250,8 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
                 font=dict(size=11, color="black"),
             )
 
-    # Payback callout moved higher so it is readable
     if payback_date is not None and payback_years is not None:
-        fig.add_vline(
-            x=payback_date,
-            line_width=1,
-            line_dash="dot",
-            line_color="gray",
-        )
-
+        fig.add_vline(x=payback_date, line_width=1, line_dash="dot", line_color="gray")
         fig.add_annotation(
             x=payback_date,
             y=1.10,
@@ -1467,6 +1294,7 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
     fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
 
     return fig
+
 
 # -----------------------------
 # Session state init
@@ -1511,7 +1339,7 @@ acquisition_cost_override = st.sidebar.number_input(
     value=0.0,
     step=1000.0,
     format="%.1f",
-    disabled=not use_acquisition_override
+    disabled=not use_acquisition_override,
 )
 
 use_dc_override = st.sidebar.checkbox("Use D&C Override for All Slots", value=False)
@@ -1519,7 +1347,7 @@ dc_override = st.sidebar.number_input(
     "D&C Override ($/ft)",
     value=750.0,
     step=25.0,
-    disabled=not use_dc_override
+    disabled=not use_dc_override,
 )
 
 use_bid_override = st.sidebar.checkbox("Use $/Acre Override for All Slots", value=False)
@@ -1527,7 +1355,7 @@ bid_override = st.sidebar.number_input(
     "$/Acre Override",
     value=8000.0,
     step=250.0,
-    disabled=not use_bid_override
+    disabled=not use_bid_override,
 )
 
 st.sidebar.subheader("Taxes")
@@ -1575,10 +1403,30 @@ with st.sidebar.expander("NGL Component Prices", expanded=False):
 
 st.sidebar.subheader("Dale Promote")
 promote_enabled = st.sidebar.checkbox("Dale Promote On", value=False)
-acreage_carry = st.sidebar.number_input("Acreage Carry", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
-through_first_well_carry = st.sidebar.number_input("Through First Well Carry", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
-promote_rate = st.sidebar.number_input("Promote", value=0.0625, step=0.01, format="%.4f", disabled=not promote_enabled)
-promote_multiple = st.sidebar.number_input("Promote Multiple", value=1.00, step=0.05, format="%.2f", disabled=not promote_enabled)
+
+promote_rate = st.sidebar.number_input(
+    "Promote",
+    value=0.0625,
+    step=0.01,
+    format="%.4f",
+    disabled=not promote_enabled,
+)
+
+promote_multiple = st.sidebar.number_input(
+    "Promote Multiple",
+    value=1.00,
+    step=0.05,
+    format="%.2f",
+    disabled=not promote_enabled,
+)
+
+promote_irr_threshold = st.sidebar.number_input(
+    "Promote IRR Threshold",
+    value=0.00,
+    step=0.01,
+    format="%.4f",
+    disabled=not promote_enabled,
+)
 
 deal_inputs = {
     "use_acquisition_override": use_acquisition_override,
@@ -1620,12 +1468,11 @@ deal_inputs = {
     "price_butane": price_butane,
     "price_pentanes": price_pentanes,
     "promote_enabled": promote_enabled,
-    "acreage_carry": acreage_carry if promote_enabled else 0.0,
-    "through_first_well_carry": through_first_well_carry if promote_enabled else 0.0,
     "promote_rate": promote_rate if promote_enabled else 0.0,
     "promote_multiple": promote_multiple if promote_enabled else 0.0,
-    "promote_irr_threshold": acreage_carry if promote_enabled else 0.0,
+    "promote_irr_threshold": promote_irr_threshold if promote_enabled else 0.0,
 }
+
 
 # -----------------------------
 # Slot controls
@@ -1647,11 +1494,7 @@ with col1:
 
 with col2:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-    load_slots_clicked = st.button(
-        "Load Slots",
-        use_container_width=True,
-        type="primary",
-    )
+    load_slots_clicked = st.button("Load Slots", use_container_width=True, type="primary")
 
 with col3:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
@@ -1670,8 +1513,7 @@ if load_slots_clicked:
     st.session_state["slot_df"] = resize_slot_df(st.session_state["slot_df"], num_slots)
     st.session_state["model_has_run"] = False
 
-st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"])
-slot_df_display = st.session_state["slot_df"]
+slot_df_display = apply_calc_unit_acres(st.session_state["slot_df"].copy())
 
 slot_df = st.data_editor(
     slot_df_display,
@@ -1704,18 +1546,10 @@ slot_df = st.data_editor(
     },
 ).copy()
 
-run_model_clicked = st.button(
-    "Run Model",
-    type="primary",
-)
-
 slot_df = apply_calc_unit_acres(slot_df)
+st.session_state["slot_df"] = slot_df
 
-if not slot_df.equals(st.session_state["slot_df"]):
-    st.session_state["slot_df"] = slot_df
-    st.rerun()
-else:
-    st.session_state["slot_df"] = slot_df
+run_model_clicked = st.button("Run Model", type="primary")
 
 if run_model_clicked:
     st.session_state["slot_df"] = slot_df
@@ -1726,7 +1560,7 @@ if run_model_clicked:
     else:
         all_slots_df, deal_df, slot_audit_df, deal_audit_df, irr, moic = run_deal_model(
             slot_df,
-            deal_inputs
+            deal_inputs,
         )
 
         st.session_state["all_slots_df"] = all_slots_df
@@ -1793,17 +1627,11 @@ if (
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
 
-    deal_display_df = deal_audit_df[
-        [col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]
-    ].copy()
-
-    slot_display_df = slot_audit_df[
-        [col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]
-    ].copy()
+    deal_display_df = deal_audit_df[[col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]].copy()
+    slot_display_df = slot_audit_df[[col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]].copy()
 
     deal_audit_display_df = format_display_df(deal_display_df)
     slot_audit_display_df = format_display_df(slot_display_df)
-
     audit_excel_data = to_excel_bytes(deal_audit_df, slot_audit_df)
 
     with st.expander("Monthly Data", expanded=False):
@@ -1848,17 +1676,8 @@ if (
 
     st.subheader("Sensitivity Tables")
 
-    base_dc = (
-        deal_inputs["dc_override"]
-        if deal_inputs["use_dc_override"]
-        else float(slot_df["dc_costs"].mean())
-    )
-
-    base_bid = (
-        deal_inputs["bid_override"]
-        if deal_inputs["use_bid_override"]
-        else float(slot_df["bid_per_acre"].mean())
-    )
+    base_dc = deal_inputs["dc_override"] if deal_inputs["use_dc_override"] else float(slot_df["dc_costs"].mean())
+    base_bid = deal_inputs["bid_override"] if deal_inputs["use_bid_override"] else float(slot_df["bid_per_acre"].mean())
 
     irr_sens_df, moic_sens_df = run_bid_dc_sensitivity(
         slot_df=slot_df,
@@ -1946,35 +1765,29 @@ if (
         base_y=base_bid,
     )
 
-    with st.expander("D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
+    with st.expander("D&C Costs ($/ft) vs. $/Acre Bid Sensitivity", expanded=True):
         col1, col2 = st.columns(2)
-
         with col1:
             st.markdown("### IRR Sensitivity")
             st.plotly_chart(irr_heatmap, use_container_width=True)
-
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_heatmap, use_container_width=True)
 
-    with st.expander("Oil Price vs. \$/Acre Bid Sensitivity", expanded=False):
+    with st.expander("Oil Price vs. $/Acre Bid Sensitivity", expanded=False):
         col1, col2 = st.columns(2)
-
         with col1:
             st.markdown("### IRR Sensitivity")
             st.plotly_chart(irr_oil_bid_heatmap, use_container_width=True)
-
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_oil_bid_heatmap, use_container_width=True)
 
-    with st.expander("Gas Price vs. \$/Acre Bid Sensitivity", expanded=False):
+    with st.expander("Gas Price vs. $/Acre Bid Sensitivity", expanded=False):
         col1, col2 = st.columns(2)
-
         with col1:
             st.markdown("### IRR Sensitivity")
             st.plotly_chart(irr_gas_bid_heatmap, use_container_width=True)
-
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_gas_bid_heatmap, use_container_width=True)
@@ -2012,13 +1825,11 @@ if (
         base_y=base_bid,
     )
 
-    with st.expander("TC Risk vs. \$/Acre Bid Sensitivity", expanded=False):
+    with st.expander("TC Risk vs. $/Acre Bid Sensitivity", expanded=False):
         col1, col2 = st.columns(2)
-
         with col1:
             st.markdown("### IRR Sensitivity")
             st.plotly_chart(irr_tcrisk_bid_heatmap, use_container_width=True)
-
         with col2:
             st.markdown("### MOIC Sensitivity")
             st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
@@ -2037,39 +1848,32 @@ if (
     )
 
     with st.expander("Quarterly Output", expanded=False):
-        st.markdown(
-            quarterly_output_styler.to_html(),
-            unsafe_allow_html=True,
-        )
+        st.markdown(quarterly_output_styler.to_html(), unsafe_allow_html=True)
 
         st.markdown("### Deal Highlights")
-
         h1, h2, h3, h4 = st.columns(4)
 
         with h1:
             render_deal_highlight_box(
                 "IRR",
-                format_accounting_percent(irr, decimals=1, zero_as_dash=False) if irr is not None else "N/A"
+                format_accounting_percent(irr, decimals=1, zero_as_dash=False) if irr is not None else "N/A",
             )
-
         with h2:
             render_deal_highlight_box(
                 "MOIC",
-                format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A"
+                format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A",
             )
-
         with h3:
             render_deal_highlight_box(
                 "Net Acres",
-                format_accounting_number(total_net_acres, decimals=1)
+                format_accounting_number(total_net_acres, decimals=1),
             )
-
         with h4:
             render_deal_highlight_box(
                 "$/Acre Bid",
-                format_accounting_number(blended_bid, decimals=0, prefix="$")
+                format_accounting_number(blended_bid, decimals=0, prefix="$"),
             )
-            
+
     tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(slot_df)
     tc_output_styler = style_tc_assumptions_output_table(
         tc_output_display_df,
@@ -2077,26 +1881,15 @@ if (
     )
 
     with st.expander("TC Assumptions Output", expanded=False):
-        st.markdown(
-            tc_output_styler.to_html(),
-            unsafe_allow_html=True,
-        )
-
-    with st.expander("TC Assumptions Output", expanded=False):
-        st.markdown(
-            tc_output_styler.to_html(),
-            unsafe_allow_html=True,
-        )
+        st.markdown(tc_output_styler.to_html(), unsafe_allow_html=True)
 
     cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
     prod_chart = build_production_profile_chart(deal_df)
 
     with st.expander("Charts", expanded=False):
         chart_tab1, chart_tab2 = st.tabs(["Cumulative FCF", "Production"])
-
         with chart_tab1:
             st.plotly_chart(cum_fcf_chart, use_container_width=True)
-
         with chart_tab2:
             st.plotly_chart(prod_chart, use_container_width=True)
 
