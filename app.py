@@ -1238,11 +1238,16 @@ def build_production_profile_chart(deal_df, chart_view="Stacked BOE/d"):
             title=dict(text="Net Production (BOE/d)", font=dict(color="black")),
             tickfont=dict(color="black"),
         ),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        height=500,
-        margin=dict(l=40, r=40, t=70, b=40),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.16,
+            xanchor="center",
+            x=0.5,
+            font=dict(color="black"),
+            traceorder="normal",
+            entrywidth=140,
+            entrywidthmode="pixels",
     )
 
     fig.update_xaxes(showgrid=False)
@@ -1481,9 +1486,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
     tc_jitter = {
-        0.90: -50,
+        0.90: -125,
         1.00: 0,
-        1.10: 50,
+        1.10: 125,
     }
     
     for pricing_name in ["Downside", "Base", "Upside"]:
@@ -1507,7 +1512,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
                     y=dc_df["irr"],
                     mode="markers",
                     name=dc_label_map[dc_case],
-                    legendgroup=f"dc_{dc_case}",
+                    legendgroup="dc",
                     showlegend=show_legend,
                     marker=dict(
                         color=color_map[dc_case],
@@ -1550,24 +1555,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             & (chart_df["bid"].round(2) == base_bid_rounded)
         ].copy()
 
-    if not base_points.empty:
-        fig.add_trace(
-            go.Scatter(
-                x=base_points["bid"],
-                y=base_points["irr"],
-                mode="markers",
-                name="Current Base Point",
-                marker=dict(
-                    color="#1F4E79",
-                    size=18,
-                    line=dict(color="black", width=2),
-                    opacity=1.0,
-                ),
-                hovertemplate="Current Base Point<br>Bid: $%{x:,.0f}<br>IRR: %{y:.1%}<extra></extra>",
-            ),
-            row=1,
-            col=2,
-        )
+
     
     tc_legend_items = [
         ("TC Risk 90%", 0.90),
@@ -1582,7 +1570,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
                 y=[None],
                 mode="markers",
                 name=label,
-                legendgroup="tc_risk",
+                legendgroup="tc",
                 showlegend=True,
                 marker=dict(
                     color="rgba(120,120,120,0.85)",
@@ -1594,7 +1582,26 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             row=1,
             col=1,
         )
-    
+
+    if not base_points.empty:
+    fig.add_trace(
+        go.Scatter(
+            x=base_points["bid"],
+            y=base_points["irr"],
+            mode="markers",
+            name="Current Base Point",
+            marker=dict(
+                color="#1F4E79",
+                size=18,
+                line=dict(color="black", width=2),
+                opacity=1.0,
+            ),
+            hovertemplate="Current Base Point<br>Bid: $%{x:,.0f}<br>IRR: %{y:.1%}<extra></extra>",
+        ),
+        row=1,
+        col=2,
+    )
+
     for c in [1, 2, 3]:
         fig.update_xaxes(
             title_text="$/Acre Bid",
@@ -1624,13 +1631,17 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
-            orientation="v",
+            orientation="h",
             yanchor="top",
-            y=-0.05,
+            y=-0.20,
             xanchor="center",
             x=0.5,
-            tracegroupgap=10,
-        ),
+            font=dict(color="black"),
+            traceorder="normal",
+            entrywidth=160,
+            entrywidthmode="pixels",
+            tracegroupgap=20, 
+        )
     )
     
     fig.update_xaxes(
