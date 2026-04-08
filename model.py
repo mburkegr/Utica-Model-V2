@@ -397,6 +397,21 @@ def build_slot_financials(
         slot_ngl=slot_ngl,
     ).copy()
 
+    required_cols = [
+        "equity_oil_production",
+        "equity_gas_production",
+        "equity_ngl_production",
+        "local_oil_price",
+        "local_gas_price",
+        "local_ngl_price",
+        "total_loe",
+        "tax",
+        "capex",
+    ]
+    missing_cols = [c for c in required_cols if c not in one_well_df.columns]
+    if missing_cols:
+        raise KeyError(f"Missing expected columns in one_well_df: {missing_cols}")
+    
     df = one_well_df.copy()
 
     gross_wells = float(slot["gross_wells"])
@@ -419,10 +434,20 @@ def build_slot_financials(
         + (df["equity_gas_production"] / 6.0)
     ) * net_wells
 
-    df["slot_oil_revenue"] = df["oil_revenue"] * net_wells
-    df["slot_gas_revenue"] = df["gas_revenue"] * net_wells
-    df["slot_ngl_revenue"] = df["ngl_revenue"] * net_wells
-    df["slot_total_revenue"] = df["slot_oil_revenue"] + df["slot_gas_revenue"] + df["slot_ngl_revenue"]
+    df["slot_oil_revenue"] = (
+        df["equity_oil_production"] * df["local_oil_price"] * net_wells
+    )
+    df["slot_gas_revenue"] = (
+        df["equity_gas_production"] * df["local_gas_price"] * net_wells
+    )
+    df["slot_ngl_revenue"] = (
+        df["equity_ngl_production"] * df["local_ngl_price"] * net_wells
+    )
+    df["slot_total_revenue"] = (
+        df["slot_oil_revenue"]
+        + df["slot_gas_revenue"]
+        + df["slot_ngl_revenue"]
+    )
 
     df["slot_loe"] = df["total_loe"] * net_wells
     df["slot_tax"] = df["tax"] * net_wells
