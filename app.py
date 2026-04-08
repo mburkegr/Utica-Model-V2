@@ -1660,12 +1660,24 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     return fig
 
 def fig_to_base64_png(fig, width=1200, height=700):
-    img_bytes = fig.to_image(format="png", width=width, height=height, scale=2)
-    return base64.b64encode(img_bytes).decode("utf-8")
+    try:
+        img_bytes = fig.to_image(format="png", width=width, height=height, scale=2)
+        return base64.b64encode(img_bytes).decode("utf-8")
+    except Exception:
+        return None
 
 
-def html_img_from_fig(fig, width=900, height=500):
+def html_img_from_fig(fig, width=900, height=500, title="Chart"):
     img_b64 = fig_to_base64_png(fig, width=width, height=height)
+
+    if img_b64 is None:
+        return f"""
+        <div style="margin:12px 0 20px 0; padding:12px; border:1px solid #cccccc;">
+            <b>{title}</b><br>
+            Image export unavailable in current environment.
+        </div>
+        """
+
     return f'<img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:900px; margin:12px 0 20px 0;">'
 
 
@@ -1713,24 +1725,17 @@ def build_email_html(
 
     sensitivities_html = "".join([
         "<h3 style='margin-bottom:8px;'>Sensitivities:</h3>",
-        "<div><b>Oil Price IRR</b></div>",
-        html_img_from_fig(irr_oil_bid_heatmap, width=1100, height=450),
-        "<div><b>Gas Price IRR</b></div>",
-        html_img_from_fig(irr_gas_bid_heatmap, width=1100, height=450),
-        "<div><b>D&amp;C Costs IRR</b></div>",
-        html_img_from_fig(irr_heatmap, width=1100, height=450),
-        "<div><b>TC Risk IRR</b></div>",
-        html_img_from_fig(irr_tcrisk_bid_heatmap, width=1100, height=450),
+        html_img_from_fig(irr_oil_bid_heatmap, width=1100, height=450, title="Oil Price IRR"),
+        html_img_from_fig(irr_gas_bid_heatmap, width=1100, height=450, title="Gas Price IRR"),
+        html_img_from_fig(irr_heatmap, width=1100, height=450, title="D&C Costs IRR"),
+        html_img_from_fig(irr_tcrisk_bid_heatmap, width=1100, height=450, title="TC Risk IRR"),
     ])
-
+    
     charts_html = "".join([
         "<h3 style='margin-bottom:8px;'>Charts:</h3>",
-        "<div><b>Cumulative FCF</b></div>",
-        html_img_from_fig(cum_fcf_chart, width=1100, height=520),
-        "<div><b>Production in BOE/d</b></div>",
-        html_img_from_fig(prod_chart_stacked, width=1100, height=520),
-        "<div><b>Scenario Matrix</b></div>",
-        html_img_from_fig(scenario_scatter_chart, width=1300, height=700),
+        html_img_from_fig(cum_fcf_chart, width=1100, height=520, title="Cumulative FCF"),
+        html_img_from_fig(prod_chart_stacked, width=1100, height=520, title="Production in BOE/d"),
+        html_img_from_fig(scenario_scatter_chart, width=1300, height=700, title="Scenario Matrix"),
     ])
 
     html = f"""
