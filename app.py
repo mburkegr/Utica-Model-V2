@@ -1204,20 +1204,26 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x=monthly_fcf["date"],
-        y=monthly_fcf["cum_fcf"],
-        mode="lines",
-        name="Cumulative FCF",
-        fill="tozeroy",
-        hovertemplate="Date: %{x|%Y-%m-%d}<br>Cumulative FCF: %{y:,.1f}<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=monthly_fcf["date"],
+            y=monthly_fcf["cum_fcf"],
+            mode="lines",
+            name="Cumulative FCF",
+            fill="tozeroy",
+            hovertemplate="Date: %{x|%Y-%m-%d}<br>Cumulative FCF: %{y:,.1f}<extra></extra>",
+        )
+    )
 
     fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="gray")
 
     slot_chart = slot_df.copy()
-    slot_chart["drilling_spud_month"] = pd.to_datetime(slot_chart["drilling_spud_month"], errors="coerce")
-    slot_chart = slot_chart[slot_chart["drilling_spud_month"] <= pd.Timestamp("2040-12-31")].copy()
+    slot_chart["drilling_spud_month"] = pd.to_datetime(
+        slot_chart["drilling_spud_month"], errors="coerce"
+    )
+    slot_chart = slot_chart[
+        slot_chart["drilling_spud_month"] <= pd.Timestamp("2040-12-31")
+    ].copy()
 
     if not slot_chart.empty:
         spud_summary = (
@@ -1230,40 +1236,53 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             spud_date = row["drilling_spud_month"]
             gross_wells = row["gross_wells"]
 
+            # wider / more visible vertical rectangle
             x0 = spud_date
             x1 = spud_date + pd.offsets.MonthEnd(1)
 
             fig.add_vrect(
                 x0=x0,
                 x1=x1,
-                fillcolor="rgba(78, 128, 177, 0.18)",
-                line_width=0,
+                fillcolor="rgba(78, 128, 177, 0.28)",
+                line_width=3,
+                line_color="rgba(78, 128, 177, 0.65)",
                 layer="below",
             )
 
+            # write out Gross Wells instead of GW
             fig.add_annotation(
-                x=spud_date + pd.Timedelta(days=12),
-                y=1.02,
+                x=spud_date + pd.Timedelta(days=14),
+                y=1.03,
                 yref="paper",
-                text=f"{gross_wells:.1f} GW",
+                text=f"{gross_wells:.1f} Gross Wells",
                 showarrow=False,
-                font=dict(size=11, color="black"),
+                font=dict(size=13, color="black"),
+                bgcolor="rgba(255,255,255,0)",
+                bordercolor="rgba(0,0,0,0)",
+                borderwidth=0,
             )
 
     if payback_date is not None and payback_years is not None:
-        fig.add_vline(x=payback_date, line_width=1, line_dash="dot", line_color="gray")
+        fig.add_vline(
+            x=payback_date,
+            line_width=1,
+            line_dash="dot",
+            line_color="gray",
+        )
+
         fig.add_annotation(
             x=payback_date,
-            y=1.10,
+            y=1.08,
             yref="paper",
             text=f"<b>Payback = {payback_years:.1f} years</b>",
             showarrow=True,
             arrowhead=2,
             ax=0,
-            ay=25,
-            bgcolor="white",
-            bordercolor="gray",
-            font=dict(size=12, color="black"),
+            ay=28,
+            font=dict(size=15, color="black"),
+            bgcolor="rgba(255,255,255,0)",
+            bordercolor="rgba(0,0,0,0)",
+            borderwidth=0,
         )
 
     fig.update_layout(
