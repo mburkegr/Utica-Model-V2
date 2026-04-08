@@ -1439,9 +1439,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     chart_df = chart_df[pd.notnull(chart_df["irr"])].copy()
 
     color_map = {
-        "Low": "#6AA84F",
-        "Base": "#1F4E79",
-        "High": "#C0504D",
+        "Low": "#9ECAE1",
+        "Base": "#4E80B1",
+        "High": "#1F4E79",
     }
 
     size_map = {
@@ -1463,24 +1463,19 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
-
+    
     for pricing_name in ["Downside", "Base", "Upside"]:
         panel_df = chart_df[chart_df["pricing_case"] == pricing_name].copy()
         col_num = panel_col_map[pricing_name]
-
+    
         for dc_case in ["Low", "Base", "High"]:
             dc_df = panel_df[panel_df["dc_case"] == dc_case].copy()
             if dc_df.empty:
                 continue
-
+    
             marker_sizes = [size_map.get(float(x), 14) for x in dc_df["tc_risk"]]
-            dc_label_map = {
-                "Low": f"Low (${base_dc - 100.0:,.0f}/ft)",
-                "Base": f"Base (${base_dc:,.0f}/ft)",
-                "High": f"High (${base_dc + 100.0:,.0f}/ft)",
-            }
             show_legend = dc_case not in legend_seen
-
+    
             fig.add_trace(
                 go.Scatter(
                     x=dc_df["bid"],
@@ -1498,7 +1493,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
                     hovertemplate=(
                         "Bid: $%{x:,.0f}"
                         "<br>IRR: %{y:.1%}"
-                        "<br>D&C: " + dc_case +
+                        "<br>D&C: " + dc_label_map[dc_case] +
                         "<br>TC Risk: %{customdata[0]:.0%}"
                         "<br>Oil: $%{customdata[1]:.0f}"
                         "<br>Gas: $%{customdata[2]:.2f}"
@@ -1509,6 +1504,8 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
                 row=1,
                 col=col_num,
             )
+
+        legend_seen.add(dc_case)
 
             legend_seen.add(dc_case)
 
