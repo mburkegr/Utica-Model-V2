@@ -1450,6 +1450,12 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         1.10: 20,
     }
 
+    dc_label_map = {
+        "Low": f"Low (${base_dc - 100.0:,.0f}/ft)",
+        "Base": f"Base (${base_dc:,.0f}/ft)",
+        "High": f"High (${base_dc + 100.0:,.0f}/ft)",
+    }
+    
     fig = make_subplots(
         rows=1,
         cols=3,
