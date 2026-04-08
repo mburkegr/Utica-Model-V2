@@ -1276,8 +1276,8 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             arrowhead=2,
             ax=0,
             ay=28,
-            font=dict(size=15, color="black"),
-            bgcolor="rgba(255,255,255,0)",
+            font=dict(size=16, color="black"),  # slightly bigger
+            bgcolor="rgba(255,255,255,0)",     # no box
             bordercolor="rgba(0,0,0,0)",
             borderwidth=0,
         )
