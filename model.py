@@ -1,6 +1,9 @@
-import pandas as pd
-import numpy as np
+import os
+from functools import lru_cache
 from datetime import date
+
+import numpy as np
+import pandas as pd
 
 try:
     import pyxirr
@@ -15,7 +18,8 @@ def clean_tc_name(name):
     return str(name).strip().lower().replace(" ", "_")
 
 
-def load_type_curve_library(file_path="type_curve_library.xlsx"):
+@lru_cache(maxsize=8)
+def _load_type_curve_library_cached(file_path, file_mtime):
     tc_monthly = pd.read_excel(file_path, sheet_name="tc_monthly")
     tc_metadata = pd.read_excel(file_path, sheet_name="tc_metadata")
 
@@ -30,10 +34,15 @@ def load_type_curve_library(file_path="type_curve_library.xlsx"):
 
         library[tc_name] = {
             "base_lateral": float(meta_row["base_lateral"].iloc[0]),
-            "monthly": monthly_df[["month", "oil", "gas"]].copy().sort_values("month")
+            "monthly": monthly_df[["month", "oil", "gas"]].copy().sort_values("month"),
         }
 
     return library
+
+
+def load_type_curve_library(file_path="type_curve_library.xlsx"):
+    file_mtime = os.path.getmtime(file_path)
+    return _load_type_curve_library_cached(file_path, file_mtime)
 
 
 def default_effective_date():
@@ -75,26 +84,30 @@ def build_slot_ngl_factors(
         shrink_contribution = sales_volume_factor * shrink_factor
         component_price = float(ngl_prices[component])
 
-        rows.append({
-            "component": component,
-            "content_pct": content_pct,
-            "implied_ngl_content": implied_ngl_content,
-            "recovery_pct": recovery_pct,
-            "sales_volume_factor": sales_volume_factor,
-            "shrink_factor": shrink_factor,
-            "shrink_contribution": shrink_contribution,
-            "component_price": component_price,
-        })
+        rows.append(
+            {
+                "component": component,
+                "content_pct": content_pct,
+                "implied_ngl_content": implied_ngl_content,
+                "recovery_pct": recovery_pct,
+                "sales_volume_factor": sales_volume_factor,
+                "shrink_factor": shrink_factor,
+                "shrink_contribution": shrink_contribution,
+                "component_price": component_price,
+            }
+        )
 
     ngl_detail_df = pd.DataFrame(rows)
 
     shrink = float(ngl_detail_df["shrink_contribution"].sum())
 
-    aggregate_ngl_price = float((
-        ngl_detail_df["recovery_pct"]
-        * ngl_detail_df["content_pct"]
-        * ngl_detail_df["component_price"]
-    ).sum())
+    aggregate_ngl_price = float(
+        (
+            ngl_detail_df["recovery_pct"]
+            * ngl_detail_df["content_pct"]
+            * ngl_detail_df["component_price"]
+        ).sum()
+    )
 
     ngl_pct_of_wti = aggregate_ngl_price * 42.0 / 60.0
 
@@ -120,25 +133,35 @@ def calc_slot_metrics(slot, deal_settings, total_net_acres):
         bid_price_final = float(slot["bid_per_acre"])
 
     if bool(slot["use_calc_unit_acres"]):
-        unit_acres_final = float(slot["gross_wells"]) * float(slot["lateral_length"]) / 50.0
+        unit_acres_final = (
+            float(slot["gross_wells"]) * float(slot["lateral_length"]) / 50.0
+        )
     else:
         unit_acres_final = float(slot["unit_acres"])
 
     if unit_acres_final == 0:
         working_interest = 0.0
     else:
-        working_interest = (float(slot["net_acres"]) / unit_acres_final) * float(slot["pct_unitized"])
+        working_interest = (
+            float(slot["net_acres"]) / unit_acres_final
+        ) * float(slot["pct_unitized"])
 
     net_wells = working_interest * float(slot["gross_wells"])
 
-    use_acquisition_override = bool(deal_settings.get("use_acquisition_override", False))
-    acquisition_cost_override = float(deal_settings.get("acquisition_cost_override", 0.0))
+    use_acquisition_override = bool(
+        deal_settings.get("use_acquisition_override", False)
+    )
+    acquisition_cost_override = float(
+        deal_settings.get("acquisition_cost_override", 0.0)
+    )
 
     if use_acquisition_override:
         if total_net_acres == 0:
             acquisition_cost = 0.0
         else:
-            acquisition_cost = (float(slot["net_acres"]) / total_net_acres) * acquisition_cost_override
+            acquisition_cost = (
+                float(slot["net_acres"]) / total_net_acres
+            ) * acquisition_cost_override
     else:
         acquisition_cost = float(slot["net_acres"]) * bid_price_final
 
@@ -147,7 +170,7 @@ def calc_slot_metrics(slot, deal_settings, total_net_acres):
     slot["working_interest"] = working_interest
     slot["net_wells_calc"] = net_wells
     slot["acquisition_cost"] = acquisition_cost
-    
+
     return slot
 
 
@@ -184,12 +207,13 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
 
     ll_scale = lateral_length / base_lateral
 
-    # Risk applies to base type curve volumes before lateral scaling
     tc_df["base_oil_scaled"] = tc_df["oil"] * tc_risk * ll_scale
     tc_df["base_gas_scaled"] = tc_df["gas"] * tc_risk * ll_scale
 
     tc_df["gross_oil_production"] = tc_df["base_oil_scaled"]
-    tc_df["gross_gas_production"] = tc_df["base_gas_scaled"] * (1.0 - float(slot_ngl["shrink"]))
+    tc_df["gross_gas_production"] = tc_df["base_gas_scaled"] * (
+        1.0 - float(slot_ngl["shrink"])
+    )
     tc_df["gross_ngl_production"] = tc_df["base_gas_scaled"] * ngl_yield / 42.0
 
     tc_df["monthly_production_boe"] = (
@@ -202,98 +226,115 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
     tc_df["gas_royalty_volumes"] = tc_df["gross_gas_production"] * (1.0 - nri)
     tc_df["ngl_royalty_volumes"] = tc_df["gross_ngl_production"] * (1.0 - nri)
 
-    tc_df["equity_oil_production"] = tc_df["gross_oil_production"] - tc_df["oil_royalty_volumes"]
-    tc_df["equity_gas_production"] = tc_df["gross_gas_production"] - tc_df["gas_royalty_volumes"]
-    tc_df["equity_ngl_production"] = tc_df["gross_ngl_production"] - tc_df["ngl_royalty_volumes"]
+    tc_df["equity_oil_production"] = (
+        tc_df["gross_oil_production"] - tc_df["oil_royalty_volumes"]
+    )
+    tc_df["equity_gas_production"] = (
+        tc_df["gross_gas_production"] - tc_df["gas_royalty_volumes"]
+    )
+    tc_df["equity_ngl_production"] = (
+        tc_df["gross_ngl_production"] - tc_df["ngl_royalty_volumes"]
+    )
 
     tc_df["local_oil_price"] = oil_price + oil_diff
     tc_df["local_gas_price"] = gas_price + gas_diff
     tc_df["local_ngl_price"] = oil_price * float(slot_ngl["ngl_pct_of_wti"])
 
-    # revenue breakout
     tc_df["oil_revenue"] = tc_df["local_oil_price"] * tc_df["equity_oil_production"]
     tc_df["gas_revenue"] = tc_df["local_gas_price"] * tc_df["equity_gas_production"]
     tc_df["ngl_revenue"] = tc_df["local_ngl_price"] * tc_df["equity_ngl_production"]
     tc_df["total_revenue"] = (
-        tc_df["oil_revenue"]
-        + tc_df["gas_revenue"]
-        + tc_df["ngl_revenue"]
+        tc_df["oil_revenue"] + tc_df["gas_revenue"] + tc_df["ngl_revenue"]
     )
-    
-    tc_df["opex"] = -((
+
+    variable_loe = -(
         tc_df["gross_oil_production"] * oil_opex_bbl
         + tc_df["gross_gas_production"] * gas_opex_mcf
-    ) + tc_df["gross_ngl_production"] * ngl_opex)
-    
-    tc_df["total_loe"] = tc_df["opex"] - fixed_loe
-    
-    # tax breakout
+        + tc_df["gross_ngl_production"] * ngl_opex
+    )
+    fixed_loe_monthly = -fixed_loe
+
+    tc_df["variable_loe"] = variable_loe
+    tc_df["fixed_loe_monthly"] = fixed_loe_monthly
+    tc_df["total_loe"] = tc_df["variable_loe"] + tc_df["fixed_loe_monthly"]
+
     tc_df["ad_valorem_tax"] = -(ad_val_tax * tc_df["total_revenue"])
     tc_df["oil_severance_tax"] = -(oil_sev_tax * tc_df["equity_oil_production"])
     tc_df["gas_severance_tax"] = -(
-        gas_sev_tax * (tc_df["equity_gas_production"] / (1.0 - float(slot_ngl["shrink"])))
+        gas_sev_tax
+        * (tc_df["equity_gas_production"] / (1.0 - float(slot_ngl["shrink"])))
     )
-    
+
     tc_df["tax"] = (
         tc_df["ad_valorem_tax"]
         + tc_df["oil_severance_tax"]
         + tc_df["gas_severance_tax"]
     )
-    
-    # preserve old names so downstream code still works
+
     tc_df["net_revenue"] = tc_df["total_revenue"]
-    tc_df["loe"] = tc_df["total_loe"]
+    tc_df["opex"] = tc_df["variable_loe"]
 
     tc_df["period"] = tc_df["month"]
 
-    period_0 = pd.DataFrame({
-        "period": [0],
-        "base_oil_scaled": [0.0],
-        "base_gas_scaled": [0.0],
-        "gross_oil_production": [0.0],
-        "gross_gas_production": [0.0],
-        "gross_ngl_production": [0.0],
-        "monthly_production_boe": [0.0],
-        "oil_royalty_volumes": [0.0],
-        "gas_royalty_volumes": [0.0],
-        "ngl_royalty_volumes": [0.0],
-        "equity_oil_production": [0.0],
-        "equity_gas_production": [0.0],
-        "equity_ngl_production": [0.0],
-        "local_oil_price": [oil_price + oil_diff],
-        "local_gas_price": [gas_price + gas_diff],
-        "local_ngl_price": [oil_price * float(slot_ngl["ngl_pct_of_wti"]) + float(slot["ngl_diff"])],
-        "net_revenue": [0.0],
-        "opex": [0.0],
-        "total_loe": [0.0],
-        "tax": [0.0],
-    })
+    period_0 = pd.DataFrame(
+        {
+            "period": [0],
+            "base_oil_scaled": [0.0],
+            "base_gas_scaled": [0.0],
+            "gross_oil_production": [0.0],
+            "gross_gas_production": [0.0],
+            "gross_ngl_production": [0.0],
+            "monthly_production_boe": [0.0],
+            "oil_royalty_volumes": [0.0],
+            "gas_royalty_volumes": [0.0],
+            "ngl_royalty_volumes": [0.0],
+            "equity_oil_production": [0.0],
+            "equity_gas_production": [0.0],
+            "equity_ngl_production": [0.0],
+            "local_oil_price": [oil_price + oil_diff],
+            "local_gas_price": [gas_price + gas_diff],
+            "local_ngl_price": [oil_price * float(slot_ngl["ngl_pct_of_wti"])],
+            "net_revenue": [0.0],
+            "opex": [0.0],
+            "variable_loe": [0.0],
+            "fixed_loe_monthly": [0.0],
+            "total_loe": [0.0],
+            "tax": [0.0],
+        }
+    )
 
-    df = pd.concat([
-        period_0,
-        tc_df[[
-            "period",
-            "base_oil_scaled",
-            "base_gas_scaled",
-            "gross_oil_production",
-            "gross_gas_production",
-            "gross_ngl_production",
-            "monthly_production_boe",
-            "oil_royalty_volumes",
-            "gas_royalty_volumes",
-            "ngl_royalty_volumes",
-            "equity_oil_production",
-            "equity_gas_production",
-            "equity_ngl_production",
-            "local_oil_price",
-            "local_gas_price",
-            "local_ngl_price",
-            "net_revenue",
-            "opex",
-            "total_loe",
-            "tax",
-        ]]
-    ], ignore_index=True)
+    df = pd.concat(
+        [
+            period_0,
+            tc_df[
+                [
+                    "period",
+                    "base_oil_scaled",
+                    "base_gas_scaled",
+                    "gross_oil_production",
+                    "gross_gas_production",
+                    "gross_ngl_production",
+                    "monthly_production_boe",
+                    "oil_royalty_volumes",
+                    "gas_royalty_volumes",
+                    "ngl_royalty_volumes",
+                    "equity_oil_production",
+                    "equity_gas_production",
+                    "equity_ngl_production",
+                    "local_oil_price",
+                    "local_gas_price",
+                    "local_ngl_price",
+                    "net_revenue",
+                    "opex",
+                    "variable_loe",
+                    "fixed_loe_monthly",
+                    "total_loe",
+                    "tax",
+                ]
+            ],
+        ],
+        ignore_index=True,
+    )
 
     df = df.sort_values("period").reset_index(drop=True)
 
@@ -327,7 +368,9 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
 # -----------------------------
 # Slot financials
 # -----------------------------
-def build_slot_financials(slot, deal_settings, type_curve_library, global_assumptions, total_net_acres):
+def build_slot_financials(
+    slot, deal_settings, type_curve_library, global_assumptions, total_net_acres
+):
     slot = calc_slot_metrics(slot, deal_settings, total_net_acres)
 
     slot_ngl = build_slot_ngl_factors(
@@ -351,7 +394,6 @@ def build_slot_financials(slot, deal_settings, type_curve_library, global_assump
 
     gross_wells = float(slot["gross_wells"])
     net_wells = float(slot["net_wells_calc"])
-    effective_date = pd.to_datetime(deal_settings["effective_date"])
 
     df["slot_id"] = slot["slot_id"]
     df["tc_name"] = slot["tc_name"]
@@ -370,9 +412,9 @@ def build_slot_financials(slot, deal_settings, type_curve_library, global_assump
         + (df["equity_gas_production"] / 6.0)
     ) * net_wells
 
-    df["slot_oil_revenue"] = (df["local_oil_price"] * df["equity_oil_production"]) * net_wells
-    df["slot_gas_revenue"] = (df["local_gas_price"] * df["equity_gas_production"]) * net_wells
-    df["slot_ngl_revenue"] = (df["local_ngl_price"] * df["equity_ngl_production"]) * net_wells
+    df["slot_oil_revenue"] = df["oil_revenue"] * net_wells
+    df["slot_gas_revenue"] = df["gas_revenue"] * net_wells
+    df["slot_ngl_revenue"] = df["ngl_revenue"] * net_wells
     df["slot_total_revenue"] = df["slot_oil_revenue"] + df["slot_gas_revenue"] + df["slot_ngl_revenue"]
 
     df["slot_loe"] = df["total_loe"] * net_wells
@@ -380,22 +422,16 @@ def build_slot_financials(slot, deal_settings, type_curve_library, global_assump
     df["slot_capex"] = df["capex"] * net_wells
 
     df["slot_operating_profit"] = (
-        df["slot_total_revenue"]
-        + df["slot_loe"]
-        + df["slot_tax"]
+        df["slot_total_revenue"] + df["slot_loe"] + df["slot_tax"]
     )
 
     df["slot_pud_cash_flow"] = df["slot_operating_profit"] + df["slot_capex"]
 
     df["slot_asset_purchase"] = 0.0
-    df.loc[df["date"] == effective_date, "slot_asset_purchase"] = -float(slot["acquisition_cost"])
-
     df["slot_promote"] = 0.0
 
     df["slot_total_cash_flow"] = (
-        df["slot_pud_cash_flow"]
-        + df["slot_asset_purchase"]
-        + df["slot_promote"]
+        df["slot_pud_cash_flow"] + df["slot_asset_purchase"] + df["slot_promote"]
     )
 
     df["working_interest"] = float(slot["working_interest"])
@@ -416,22 +452,30 @@ def build_slot_financials(slot, deal_settings, type_curve_library, global_assump
 def align_to_financial_calendar(slot_df, effective_date, months=360):
     effective_date = pd.to_datetime(effective_date)
 
-    calendar = pd.DataFrame({
-        "date": pd.date_range(start=effective_date, periods=months, freq="MS")
-    })
-    
+    calendar = pd.DataFrame(
+        {"date": pd.date_range(start=effective_date, periods=months, freq="MS")}
+    )
+
     df = calendar.merge(slot_df, on="date", how="left")
-    
-    numeric_cols = [col for col in df.select_dtypes(include=[np.number]).columns if col != "slot_id"]
+
+    numeric_cols = [
+        col for col in df.select_dtypes(include=[np.number]).columns if col != "slot_id"
+    ]
     df[numeric_cols] = df[numeric_cols].fillna(0)
-    
+
     object_cols = df.select_dtypes(include=["object"]).columns
     for col in object_cols:
         if col == "tc_name":
-            df[col] = df[col].fillna(slot_df["tc_name"].iloc[0] if "tc_name" in slot_df.columns else "")
+            df[col] = df[col].fillna(
+                slot_df["tc_name"].iloc[0] if "tc_name" in slot_df.columns else ""
+            )
         elif col == "ngl_recovery_case":
-            df[col] = df[col].fillna(slot_df["ngl_recovery_case"].iloc[0] if "ngl_recovery_case" in slot_df.columns else "")
-    
+            df[col] = df[col].fillna(
+                slot_df["ngl_recovery_case"].iloc[0]
+                if "ngl_recovery_case" in slot_df.columns
+                else ""
+            )
+
     if "slot_id" in slot_df.columns:
         df["slot_id"] = slot_df["slot_id"].iloc[0]
 
@@ -441,10 +485,16 @@ def align_to_financial_calendar(slot_df, effective_date, months=360):
 # -----------------------------
 # Deal build / rollup
 # -----------------------------
-def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, global_assumptions):
+def build_all_slot_financials(
+    slot_inputs, deal_settings, type_curve_library, global_assumptions
+):
     slot_results = []
-    total_net_acres = pd.to_numeric(slot_inputs["net_acres"], errors="coerce").fillna(0).sum()
-    
+    total_net_acres = pd.to_numeric(
+        slot_inputs["net_acres"], errors="coerce"
+    ).fillna(0).sum()
+
+    effective_date = pd.to_datetime(deal_settings["effective_date"])
+
     for _, slot_row in slot_inputs.iterrows():
         slot_df = build_slot_financials(
             slot=slot_row,
@@ -461,17 +511,16 @@ def build_all_slot_financials(slot_inputs, deal_settings, type_curve_library, gl
         )
 
         slot_calc = calc_slot_metrics(slot_row, deal_settings, total_net_acres)
-        effective_date = pd.to_datetime(deal_settings["effective_date"])
 
         slot_df["slot_asset_purchase"] = 0.0
-
         mask = (
             (slot_df["date"].dt.year == effective_date.year)
             & (slot_df["date"].dt.month == effective_date.month)
         )
+        slot_df.loc[mask, "slot_asset_purchase"] = -float(
+            slot_calc["acquisition_cost"]
+        )
 
-            slot_df.loc[mask, "slot_asset_purchase"] = -float(slot_calc["acquisition_cost"])
-    
         if "slot_promote" not in slot_df.columns:
             slot_df["slot_promote"] = 0.0
 
@@ -511,8 +560,7 @@ def roll_up_deal(all_slots_df):
     ]
 
     deal_df = (
-        all_slots_df
-        .groupby("date", as_index=False)[sum_cols]
+        all_slots_df.groupby("date", as_index=False)[sum_cols]
         .sum()
         .sort_values("date")
         .reset_index(drop=True)
@@ -555,9 +603,10 @@ def add_promote_test_columns(df, deal_settings):
         df["slot_asset_purchase"].where(df["slot_asset_purchase"] < 0, 0).cumsum()
     )
 
+    invested_base = -(df["cum_negative_pud_cf"] + df["cum_negative_asset_purchase"])
     df["running_moic_for_promote"] = np.where(
-        -(df["cum_negative_pud_cf"] + df["cum_negative_asset_purchase"]) > 0,
-        df["cum_positive_pud_cf"] / -(df["cum_negative_pud_cf"] + df["cum_negative_asset_purchase"]),
+        invested_base > 0,
+        df["cum_positive_pud_cf"] / invested_base,
         0.0,
     )
 
@@ -574,18 +623,24 @@ def add_promote_test_columns(df, deal_settings):
             running_irrs.append(0.0)
 
     df["running_irr_for_promote"] = running_irrs
-    df["running_moic_for_promote_lag"] = df["running_moic_for_promote"].shift(1).fillna(0.0)
-    df["running_irr_for_promote_lag"] = df["running_irr_for_promote"].shift(1).fillna(0.0)
+    df["running_moic_for_promote_lag"] = (
+        df["running_moic_for_promote"].shift(1).fillna(0.0)
+    )
+    df["running_irr_for_promote_lag"] = (
+        df["running_irr_for_promote"].shift(1).fillna(0.0)
+    )
 
     df["promote_triggered"] = (
         (df["running_moic_for_promote_lag"] >= float(deal_settings["promote_multiple"]))
-        & (df["running_irr_for_promote_lag"] >= float(deal_settings["promote_irr_threshold"]))
+        & (
+            df["running_irr_for_promote_lag"]
+            >= float(deal_settings["promote_irr_threshold"])
+        )
     )
 
-    # Notebook logic uses acreage_carry for the current promote amount
     df["slot_promote"] = np.where(
         df["promote_triggered"],
-        -(df["slot_pud_cash_flow"] * float(deal_settings["acreage_carry"])),
+        -(df["slot_pud_cash_flow"] * float(deal_settings["promote_rate"])),
         0.0,
     )
 
@@ -619,20 +674,36 @@ def calc_financial_moic(df):
 # Input prep
 # -----------------------------
 def prepare_deal_settings(deal_inputs):
-    effective_date = pd.to_datetime(deal_inputs.get("effective_date", default_effective_date()))
+    effective_date = pd.to_datetime(
+        deal_inputs.get("effective_date", default_effective_date())
+    )
 
     return {
         "effective_date": effective_date,
         "use_bid_override": bool(deal_inputs.get("use_bid_override", False)),
         "bid_override": float(deal_inputs.get("bid_override", 0.0)),
-        "use_acquisition_override": bool(deal_inputs.get("use_acquisition_override", False)),
-        "acquisition_cost_override": float(deal_inputs.get("acquisition_cost_override", 0.0)),
+        "use_acquisition_override": bool(
+            deal_inputs.get("use_acquisition_override", False)
+        ),
+        "acquisition_cost_override": float(
+            deal_inputs.get("acquisition_cost_override", 0.0)
+        ),
         "promote_enabled": bool(deal_inputs.get("promote_enabled", False)),
-        "acreage_carry": float(deal_inputs.get("acreage_carry", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
-        "through_first_well_carry": float(deal_inputs.get("through_first_well_carry", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
-        "promote_rate": float(deal_inputs.get("promote_rate", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
-        "promote_multiple": float(deal_inputs.get("promote_multiple", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
-        "promote_irr_threshold": float(deal_inputs.get("promote_irr_threshold", 0.0)) if deal_inputs.get("promote_enabled", False) else 0.0,
+        "promote_rate": (
+            float(deal_inputs.get("promote_rate", 0.0))
+            if deal_inputs.get("promote_enabled", False)
+            else 0.0
+        ),
+        "promote_multiple": (
+            float(deal_inputs.get("promote_multiple", 0.0))
+            if deal_inputs.get("promote_enabled", False)
+            else 0.0
+        ),
+        "promote_irr_threshold": (
+            float(deal_inputs.get("promote_irr_threshold", 0.0))
+            if deal_inputs.get("promote_enabled", False)
+            else 0.0
+        ),
     }
 
 
@@ -721,10 +792,25 @@ def prepare_slot_inputs(slot_df, deal_inputs):
         df["bid_per_acre"] = df["bid_per_acre"].astype(float)
 
     numeric_cols = [
-        "slot_id", "lateral_length", "gross_wells", "net_acres", "unit_acres",
-        "pct_unitized", "flowback_delay", "net_revenue_interest", "dc_costs",
-        "tc_risk", "bid_per_acre", "oil_diff", "gas_diff", "ngl_diff",
-        "oil_opex_bbl", "gas_opex_mcf", "ngl_opex", "fixed_loe", "ngl_yield",
+        "slot_id",
+        "lateral_length",
+        "gross_wells",
+        "net_acres",
+        "unit_acres",
+        "pct_unitized",
+        "flowback_delay",
+        "net_revenue_interest",
+        "dc_costs",
+        "tc_risk",
+        "bid_per_acre",
+        "oil_diff",
+        "gas_diff",
+        "ngl_diff",
+        "oil_opex_bbl",
+        "gas_opex_mcf",
+        "ngl_opex",
+        "fixed_loe",
+        "ngl_yield",
     ]
     for col in numeric_cols:
         if col in df.columns:
@@ -734,6 +820,7 @@ def prepare_slot_inputs(slot_df, deal_inputs):
     df["tc_name"] = df["tc_name"].astype(str)
 
     return df
+
 
 def build_slot_audit_view(all_slots_df):
     df = all_slots_df.copy().sort_values(["slot_id", "date"]).reset_index(drop=True)
@@ -754,22 +841,18 @@ def build_slot_audit_view(all_slots_df):
         "acquisition_cost",
         "slot_shrink",
         "slot_ngl_pct_of_wti",
-
         "slot_gross_oil_production",
         "slot_gross_gas_production",
         "slot_gross_ngl_production",
         "slot_gross_boe",
-
         "slot_net_oil_production",
         "slot_net_gas_production",
         "slot_net_ngl_production",
         "slot_net_boe",
-
         "slot_oil_revenue",
         "slot_gas_revenue",
         "slot_ngl_revenue",
         "slot_total_revenue",
-
         "slot_loe",
         "slot_tax",
         "slot_operating_profit",
@@ -795,22 +878,18 @@ def build_deal_audit_view(deal_df):
         "date",
         "month_label",
         "month_num",
-
         "slot_gross_oil_production",
         "slot_gross_gas_production",
         "slot_gross_ngl_production",
         "slot_gross_boe",
-
         "slot_net_oil_production",
         "slot_net_gas_production",
         "slot_net_ngl_production",
         "slot_net_boe",
-
         "slot_oil_revenue",
         "slot_gas_revenue",
         "slot_ngl_revenue",
         "slot_total_revenue",
-
         "slot_loe",
         "slot_tax",
         "slot_operating_profit",
@@ -823,6 +902,8 @@ def build_deal_audit_view(deal_df):
 
     existing_cols = [c for c in audit_cols if c in df.columns]
     return df[existing_cols]
+
+
 # -----------------------------
 # Main entrypoint
 # -----------------------------
