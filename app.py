@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+import base64
 
 from model import run_deal_model
 
@@ -1657,6 +1658,121 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     fig.update_annotations(font=dict(color="black"))
     
     return fig
+
+def fig_to_base64_png(fig, width=1200, height=700):
+    img_bytes = fig.to_image(format="png", width=width, height=height, scale=2)
+    return base64.b64encode(img_bytes).decode("utf-8")
+
+
+def html_img_from_fig(fig, width=900, height=500):
+    img_b64 = fig_to_base64_png(fig, width=width, height=height)
+    return f'<img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:900px; margin:12px 0 20px 0;">'
+
+
+def build_email_html(
+    opportunity_name,
+    deal_inputs,
+    slot_df,
+    irr,
+    moic,
+    tc_output_styler,
+    quarterly_output_styler,
+    irr_oil_bid_heatmap,
+    irr_gas_bid_heatmap,
+    irr_heatmap,
+    irr_tcrisk_bid_heatmap,
+    cum_fcf_chart,
+    prod_chart_stacked,
+    scenario_scatter_chart,
+):
+    base_gas = float(deal_inputs["gas_price"])
+    base_oil = float(deal_inputs["oil_price"])
+
+    base_dc = (
+        float(deal_inputs["dc_override"])
+        if deal_inputs["use_dc_override"]
+        else float(slot_df["dc_costs"].mean())
+    )
+
+    base_bid = (
+        float(deal_inputs["bid_override"])
+        if deal_inputs["use_bid_override"]
+        else float(slot_df["bid_per_acre"].mean())
+    )
+
+    total_wells = float(slot_df["gross_wells"].sum())
+    avg_ll = float(slot_df["lateral_length"].mean())
+    avg_pct_unitized = float(slot_df["pct_unitized"].mean())
+    avg_tc_risk = float(slot_df["tc_risk"].mean())
+
+    tc_names = slot_df["tc_name"].dropna().astype(str).unique().tolist()
+    tc_name_text = ", ".join(tc_names)
+
+    tc_table_html = tc_output_styler.to_html()
+    quarterly_table_html = quarterly_output_styler.to_html()
+
+    sensitivities_html = "".join([
+        "<h3 style='margin-bottom:8px;'>Sensitivities:</h3>",
+        "<div><b>Oil Price IRR</b></div>",
+        html_img_from_fig(irr_oil_bid_heatmap, width=1100, height=450),
+        "<div><b>Gas Price IRR</b></div>",
+        html_img_from_fig(irr_gas_bid_heatmap, width=1100, height=450),
+        "<div><b>D&amp;C Costs IRR</b></div>",
+        html_img_from_fig(irr_heatmap, width=1100, height=450),
+        "<div><b>TC Risk IRR</b></div>",
+        html_img_from_fig(irr_tcrisk_bid_heatmap, width=1100, height=450),
+    ])
+
+    charts_html = "".join([
+        "<h3 style='margin-bottom:8px;'>Charts:</h3>",
+        "<div><b>Cumulative FCF</b></div>",
+        html_img_from_fig(cum_fcf_chart, width=1100, height=520),
+        "<div><b>Production in BOE/d</b></div>",
+        html_img_from_fig(prod_chart_stacked, width=1100, height=520),
+        "<div><b>Scenario Matrix</b></div>",
+        html_img_from_fig(scenario_scatter_chart, width=1300, height=700),
+    ])
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #000000; line-height: 1.45;">
+        <p>Utica Team,</p>
+
+        <p>Below are our contemplated economics for the {opportunity_name} opportunity.</p>
+
+        <p><b>Base Case Summary:</b><br>
+        ${base_gas:.2f} flat gas price{" (dry gas, no oil)" if base_oil == 0 else f" and ${base_oil:.0f} oil"} and ${base_dc:,.0f}/ft D&amp;C costs.</p>
+
+        <p>We assumed {total_wells:,.1f} wells with lateral lengths averaging {avg_ll:,.0f} feet.</p>
+
+        <p>The {tc_name_text} type curve{"s" if len(tc_names) > 1 else ""} with a {avg_tc_risk:.0%} base case TC risk was used.</p>
+
+        <p>We applied our standard Utica framework and assumed {avg_pct_unitized:.0%} of acres are ultimately unitized, reflecting the location and associated risk.</p>
+
+        <p>The case was evaluated at a ${base_bid:,.0f}/acre bid.</p>
+
+        <p>Under these assumptions, the base case generates a <b>{irr:.1%} IRR</b> and <b>{moic:.2f}x MOIC</b>.</p>
+
+        <p>Let us know if you have any questions.</p>
+
+        <h3 style="margin-bottom:8px;">Type Curve Assumptions:</h3>
+        {tc_table_html}
+
+        <h3 style="margin-top:24px; margin-bottom:8px;">Quarterly Output:</h3>
+        {quarterly_table_html}
+
+        <div style="margin-top:24px;">
+            {sensitivities_html}
+        </div>
+
+        <div style="margin-top:24px;">
+            {charts_html}
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
 # -----------------------------
 # Session state init
 # -----------------------------
@@ -2273,6 +2389,47 @@ if (
     
         with chart_tab3:
             st.plotly_chart(scenario_scatter_chart, use_container_width=True)
+
+        st.subheader("Email Draft Export")
+    
+        opportunity_name = st.text_input(
+            "Opportunity Name for Email Draft",
+            value="Desert Gold",
+            key="email_opportunity_name",
+        )
+    
+        prod_chart_stacked = build_production_profile_chart(
+            deal_df,
+            chart_view="Stacked BOE/d",
+        )
+    
+        email_html = build_email_html(
+            opportunity_name=opportunity_name,
+            deal_inputs=deal_inputs,
+            slot_df=slot_df,
+            irr=irr,
+            moic=moic,
+            tc_output_styler=tc_output_styler,
+            quarterly_output_styler=quarterly_output_styler,
+            irr_oil_bid_heatmap=irr_oil_bid_heatmap,
+            irr_gas_bid_heatmap=irr_gas_bid_heatmap,
+            irr_heatmap=irr_heatmap,
+            irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
+            cum_fcf_chart=cum_fcf_chart,
+            prod_chart_stacked=prod_chart_stacked,
+            scenario_scatter_chart=scenario_scatter_chart,
+        )
+    
+        with st.expander("Preview Email Draft", expanded=False):
+            st.components.v1.html(email_html, height=900, scrolling=True)
+    
+        st.download_button(
+            label="Download Email Draft (HTML)",
+            data=email_html,
+            file_name="utica_email_draft.html",
+            mime="text/html",
+            key="download_email_html",
+        )
 
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
