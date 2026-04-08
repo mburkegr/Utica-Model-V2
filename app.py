@@ -2106,30 +2106,28 @@ if (
         st.markdown(tc_output_styler.to_html(), unsafe_allow_html=True)
 
     cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+    frontier_chart = build_efficient_frontier_chart(slot_df, deal_inputs)
     
-cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
-frontier_chart = build_efficient_frontier_chart(slot_df, deal_inputs)
-
-with st.expander("Charts", expanded=False):
-    chart_tab1, chart_tab2, chart_tab3 = st.tabs(
-        ["Cumulative FCF", "Production", "Efficient Frontier"]
-    )
-
-    with chart_tab1:
-        st.plotly_chart(cum_fcf_chart, use_container_width=True)
-
-    with chart_tab2:
-        prod_chart_view = st.radio(
-            "Production Chart View",
-            ["Stacked BOE/d", "Stream Split"],
-            horizontal=True,
-            key="prod_chart_view",
+    with st.expander("Charts", expanded=False):
+        chart_tab1, chart_tab2, chart_tab3 = st.tabs(
+            ["Cumulative FCF", "Production", "Efficient Frontier"]
         )
-        prod_chart = build_production_profile_chart(deal_df, chart_view=prod_chart_view)
-        st.plotly_chart(prod_chart, use_container_width=True)
-
-    with chart_tab3:
-        st.plotly_chart(frontier_chart, use_container_width=True)
+    
+        with chart_tab1:
+            st.plotly_chart(cum_fcf_chart, use_container_width=True)
+    
+        with chart_tab2:
+            prod_chart_view = st.radio(
+                "Production Chart View",
+                ["Stacked BOE/d", "Stream Split"],
+                horizontal=True,
+                key="prod_chart_view",
+            )
+            prod_chart = build_production_profile_chart(deal_df, chart_view=prod_chart_view)
+            st.plotly_chart(prod_chart, use_container_width=True)
+    
+        with chart_tab3:
+            st.plotly_chart(frontier_chart, use_container_width=True)
     
 
 
