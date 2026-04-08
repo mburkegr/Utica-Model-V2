@@ -1289,7 +1289,9 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             y=monthly_fcf["cum_fcf"],
             mode="lines",
             name="Cumulative FCF",
+            line=dict(color="#4E80B1", width=3),
             fill="tozeroy",
+            fillcolor="rgba(78, 128, 177, 0.28)",
             hovertemplate="Date: %{x|%Y-%m-%d}<br>Cumulative FCF: %{y:,.1f}<extra></extra>",
         )
     )
@@ -1479,10 +1481,10 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         shared_yaxes=True,
         horizontal_spacing=0.06,
         subplot_titles=[
-            f"Downside (${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})",
-            f"Base (${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})",
-            f"Upside (${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})",
-        ],
+            f"Downside (Oil ${pricing_cases[0][1]:.0f} / Gas ${pricing_cases[0][2]:.2f})",
+            f"Base (Oil ${pricing_cases[1][1]:.0f} / Gas ${pricing_cases[1][2]:.2f})",
+            f"Upside (Oil ${pricing_cases[2][1]:.0f} / Gas ${pricing_cases[2][2]:.2f})",
+        ]
     )
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
@@ -1655,7 +1657,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         title_font=dict(color="black"),
     )
     
-    fig.update_annotations(font=dict(color="black"))
+    fig.update_annotations(font=dict(size=14, color="black"))
     
     return fig
 
