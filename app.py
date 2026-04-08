@@ -1404,7 +1404,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         ("High", base_dc + 100.0),
     ]
     
-    tc_risk_values = [0.90, 1.00, 1.10]
+    tc_risk_values = [0.80, 1.00, 1.20]
 
     base_oil = float(deal_inputs["oil_price"])
     base_gas = float(deal_inputs["gas_price"])
@@ -1486,9 +1486,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
     tc_jitter = {
-        0.90: -250,
+        0.90: 0,
         1.00: 0,
-        1.10: 250,
+        1.10: 0,
     }
     
     for pricing_name in ["Downside", "Base", "Upside"]:
