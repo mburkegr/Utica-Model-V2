@@ -1965,6 +1965,8 @@ if (
     with st.expander("TC Assumptions Output", expanded=False):
         st.markdown(tc_output_styler.to_html(), unsafe_allow_html=True)
 
+    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+    
     with st.expander("Charts", expanded=False):
         chart_tab1, chart_tab2 = st.tabs(["Cumulative FCF", "Production"])
         with chart_tab1:
