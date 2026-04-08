@@ -1251,12 +1251,17 @@ def build_cumulative_fcf_chart(deal_df, slot_df):
             # 🔹 Move Gross Wells LOWER so it never conflicts with payback
             fig.add_annotation(
                 x=spud_date + pd.Timedelta(days=14),
-                y=0.90,                 # lower than top → avoids overlap
+                y=0.88,
                 yref="paper",
                 text=f"{gross_wells:.1f} Gross Wells",
                 showarrow=False,
-                font=dict(size=11, color="black"),
+                textangle=-90,
+                font=dict(size=10, color="black"),
                 bgcolor="rgba(255,255,255,0)",
+                bordercolor="rgba(0,0,0,0)",
+                borderwidth=0,
+                xanchor="center",
+                yanchor="middle",
             )
             
     if payback_date is not None and payback_years is not None:
