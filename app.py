@@ -1765,7 +1765,7 @@ if (
         base_y=base_bid,
     )
 
-    with st.expander("D&C Costs ($/ft) vs. $/Acre Bid Sensitivity", expanded=True):
+    with st.expander(r"D&C Costs ($/ft) vs. $/Acre Bid Sensitivity", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("### IRR Sensitivity")
