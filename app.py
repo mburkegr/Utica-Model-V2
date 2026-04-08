@@ -1584,22 +1584,22 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         )
 
     if not base_points.empty:
-    fig.add_trace(
-        go.Scatter(
-            x=base_points["bid"],
-            y=base_points["irr"],
-            mode="markers",
-            name="Current Base Point",
-            marker=dict(
-                color="#1F4E79",
-                size=18,
-                line=dict(color="black", width=2),
-                opacity=1.0,
+        fig.add_trace(
+            go.Scatter(
+                x=base_points["bid"],
+                y=base_points["irr"],
+                mode="markers",
+                name="Current Base Point",
+                marker=dict(
+                    color="#1F4E79",
+                    size=18,
+                    line=dict(color="black", width=2),
+                    opacity=1.0,
+                ),
+                hovertemplate="Current Base Point<br>Bid: $%{x:,.0f}<br>IRR: %{y:.1%}<extra></extra>",
             ),
-            hovertemplate="Current Base Point<br>Bid: $%{x:,.0f}<br>IRR: %{y:.1%}<extra></extra>",
-        ),
-        row=1,
-        col=2,
+            row=1,
+            col=2,
     )
 
     for c in [1, 2, 3]:
