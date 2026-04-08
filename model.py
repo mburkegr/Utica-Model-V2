@@ -306,6 +306,7 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
             "tax": [0.0],
         }
     )
+    
     df = pd.concat(
         [
             period_0,
@@ -327,6 +328,10 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
                     "local_oil_price",
                     "local_gas_price",
                     "local_ngl_price",
+                    "oil_revenue",
+                    "gas_revenue",
+                    "ngl_revenue",
+                    "total_revenue",
                     "net_revenue",
                     "opex",
                     "variable_loe",
@@ -338,7 +343,6 @@ def run_single_slot_economics(slot, type_curve_library, global_assumptions, slot
         ],
         ignore_index=True,
     )
-
     df = df.sort_values("period").reset_index(drop=True)
 
     dates = []
