@@ -398,6 +398,10 @@ def build_slot_financials(
     ).copy()
 
     required_cols = [
+        "gross_oil_production",
+        "gross_gas_production",
+        "gross_ngl_production",
+        "monthly_production_boe",
         "equity_oil_production",
         "equity_gas_production",
         "equity_ngl_production",
