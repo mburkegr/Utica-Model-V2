@@ -514,24 +514,27 @@ def build_heatmap(
     fig.update_layout(
         title=dict(
             text=title,
-            x=0.0,                 # 🔥 left align
+            x=0.0,
             xanchor="left",
-            y=0.98,                # slight vertical spacing
+            y=0.98,
             yanchor="top",
-            font=dict(size=18)
+            font=dict(size=18, color="black")  # ✅ force black
         ),
+        font=dict(color="black"),  # ✅ THIS is the key global fix
         xaxis=dict(
-            title=x_title,
+            title=dict(text=x_title, font=dict(color="black")),
+            tickfont=dict(color="black"),
             side="top",
             type="category",
             automargin=True
         ),
         yaxis=dict(
-            title=y_title,
+            title=dict(text=y_title, font=dict(color="black")),
+            tickfont=dict(color="black"),
             type="category",
             automargin=True
         ),
-        margin=dict(l=90, r=20, t=80, b=50),  # 🔥 extra top space
+        margin=dict(l=90, r=20, t=80, b=50),
         height=360,
     )
 
