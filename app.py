@@ -931,7 +931,7 @@ def style_quarterly_output_table(display_df, row_styles):
             {
                 "selector": "table",
                 "props": [
-                    ("border-collapse", "separate"),
+                    ("border-collapse", "collapse"),
                     ("border-spacing", "0"),
                     ("width", "100%"),
                 ],
