@@ -512,10 +512,26 @@ def build_heatmap(
     )
 
     fig.update_layout(
-        title=title,
-        xaxis=dict(title=x_title, side="top", type="category", automargin=True),
-        yaxis=dict(title=y_title, type="category", automargin=True),
-        margin=dict(l=90, r=20, t=60, b=50),
+        title=dict(
+            text=title,
+            x=0.0,                 # 🔥 left align
+            xanchor="left",
+            y=0.98,                # slight vertical spacing
+            yanchor="top",
+            font=dict(size=18)
+        ),
+        xaxis=dict(
+            title=x_title,
+            side="top",
+            type="category",
+            automargin=True
+        ),
+        yaxis=dict(
+            title=y_title,
+            type="category",
+            automargin=True
+        ),
+        margin=dict(l=90, r=20, t=80, b=50),  # 🔥 extra top space
         height=360,
     )
 
