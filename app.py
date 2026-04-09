@@ -921,6 +921,7 @@ def style_quarterly_output_table(display_df, row_styles):
         .set_properties(subset=year_cols, **{
             "text-align": "right",
             "background-color": YEAR_FILL,
+            "border": "none",
         })
         .set_properties(subset=separator_cols, **{
             "background-color": "white",
@@ -943,14 +944,16 @@ def style_quarterly_output_table(display_df, row_styles):
                     ("font-weight", "700"),
                     ("text-align", "center"),
                     ("border", "none"),
-                    ("padding", "6px 10px"),
+                    ("padding", "4px 8px"),
+                    ("font-size", "12px"),
                 ],
             },
             {
                 "selector": "tbody td",
                 "props": [
                     ("border", "none"),
-                    ("padding", "6px 10px"),
+                    ("padding", "4px 8px"),
+                    ("font-size", "12px"),
                 ],
             },
             {
@@ -1107,14 +1110,16 @@ def style_tc_assumptions_output_table(display_df, row_styles):
                     ("font-weight", "700"),
                     ("text-align", "center"),
                     ("border", "none"),
-                    ("padding", "6px 10px"),
+                    ("padding", "4px 8px"),
+                    ("font-size", "12px"),
                 ],
             },
             {
                 "selector": "tbody td",
                 "props": [
                     ("border", "none"),
-                    ("padding", "6px 10px"),
+                    ("padding", "4px 8px"),
+                    ("font-size", "12px"),
                 ],
             },
             {
