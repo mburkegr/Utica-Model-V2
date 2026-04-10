@@ -771,8 +771,11 @@ def build_quarterly_output_display_table(df):
 
         if col == " ":
             return ""
+        
         if pd.isnull(val) or val == "":
-            return ""
+            if source_row in production_rows or source_row in pct_rows or source_row in dollar_per_unit_rows or source_row in price_rows:
+                return "-"
+            return "-"
 
         if source_row in pct_rows:
             return format_accounting_percent(val, decimals=0)
@@ -921,9 +924,11 @@ def style_quarterly_output_table(display_df, row_styles):
         .set_properties(subset=year_cols, **{
             "text-align": "right",
             "background-color": YEAR_FILL,
-            "border": "none",
-            "outline": "none",
-            "box-shadow": "none",
+            "border-top": f"1px solid {YEAR_FILL}",
+            "border-bottom": f"1px solid {YEAR_FILL}",
+            "border-left": f"1px solid {YEAR_FILL}",
+            "border-right": f"1px solid {YEAR_FILL}",
+            "background-clip": "padding-box",
         })
         .set_properties(subset=separator_cols, **{
             "background-color": "white",
@@ -941,15 +946,10 @@ def style_quarterly_output_table(display_df, row_styles):
             {
                 "selector": "tbody td",
                 "props": [
-                    ("border", "none"),
-                    ("border-left", "none"),
-                    ("border-right", "none"),
-                    ("border-top", "none"),
-                    ("border-bottom", "none"),
-                    ("outline", "none"),
-                    ("box-shadow", "none"),
                     ("padding", "4px 8px"),
                     ("font-size", "12px"),
+                    ("border", "none"),
+                    ("box-shadow", "none"),
                 ],
             },
             {
