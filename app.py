@@ -922,6 +922,8 @@ def style_quarterly_output_table(display_df, row_styles):
             "text-align": "right",
             "background-color": YEAR_FILL,
             "border": "none",
+            "outline": "none",
+            "box-shadow": "none",
         })
         .set_properties(subset=separator_cols, **{
             "background-color": "white",
