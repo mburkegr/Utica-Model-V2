@@ -2421,7 +2421,7 @@ if (
         with chart_tab2:
             prod_chart_view = st.radio(
                 "Production Chart View",
-                ["Stacked BOE/d", "Stream Split"],
+                ["Stacked Mcfe/d", "Stream Split"],
                 horizontal=True,
                 key="prod_chart_view",
             )
