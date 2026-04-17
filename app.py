@@ -1279,6 +1279,11 @@ def build_production_profile_chart(deal_df, chart_view="Stacked Mcfe/d"):
             entrywidthmode="pixels",
         )
     )
+    
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
+
+    return fig
 
 def build_cumulative_fcf_chart(deal_df, slot_df):
     df = deal_df.copy()
