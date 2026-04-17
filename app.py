@@ -1776,34 +1776,47 @@ def build_email_html(
     <html>
     <body style="font-family: Arial, sans-serif; color: #000000; line-height: 1.45;">
         <p>Utica Team,</p>
-
+    
         <p>Below are our contemplated economics for the {opportunity_name} opportunity.</p>
-
-        <p><b>Base Case Summary:</b><br>
-        ${base_gas:.2f} flat gas price{" (dry gas, no oil)" if base_oil == 0 else f" and ${base_oil:.0f} oil"} and ${base_dc:,.0f}/ft D&amp;C costs.</p>
-
-        <p>We assumed {total_wells:,.1f} wells with lateral lengths averaging {avg_ll:,.0f} feet.</p>
-
-        <p>The {tc_name_text} type curve{"s" if len(tc_names) > 1 else ""} with a {avg_tc_risk:.0%} base case TC risk was used.</p>
-
-        <p>We applied our standard Utica framework and assumed {avg_pct_unitized:.0%} of acres are ultimately unitized, reflecting the location and associated risk.</p>
-
-        <p>The case was evaluated at a ${base_bid:,.0f}/acre bid.</p>
-
-        <p>Under these assumptions, the base case generates a <b>{irr:.1%} IRR</b> and <b>{moic:.2f}x MOIC</b>.</p>
-
+    
+        <p><b>Base Case Summary:</b></p>
+        <ul style="margin-top:0;">
+            <li>
+                Pricing: ${base_gas:.2f}/Mcf gas
+                {" (dry gas, no oil)" if base_oil == 0 else f" and ${base_oil:.0f}/Bbl oil"}
+            </li>
+            <li>
+                D&amp;C Costs: ${base_dc:,.0f}/ft
+            </li>
+            <li>
+                Type Curves: {tc_name_text}{"s" if len(tc_names) > 1 else ""}; {avg_tc_risk:.0%} base case TC risk
+            </li>
+            <li>
+                Development: {total_wells:,.1f} gross wells with ~{avg_ll:,.0f}' average lateral length
+            </li>
+            <li>
+                Unitization: {avg_pct_unitized:.0%} of acres assumed to be unitized
+            </li>
+            <li>
+                Entry: ${base_bid:,.0f}/acre
+            </li>
+            <li>
+                Returns: <b>{irr:.1%} IRR</b> and <b>{moic:.2f}x MOIC</b>
+            </li>
+        </ul>
+    
         <p>Let us know if you have any questions.</p>
-
+    
         <h3 style="margin-bottom:8px;">Type Curve Assumptions:</h3>
         {tc_table_html}
-
+    
         <h3 style="margin-top:24px; margin-bottom:8px;">Quarterly Output:</h3>
         {quarterly_table_html}
-
+    
         <div style="margin-top:24px;">
             {sensitivities_html}
         </div>
-
+    
         <div style="margin-top:24px;">
             {charts_html}
         </div>
@@ -2438,7 +2451,7 @@ if (
     
     opportunity_name = st.text_input(
         "Opportunity Name for Email Draft",
-        value="Desert Gold",
+        value="Fill Name Here",
         key="email_opportunity_name",
     )
     
