@@ -2078,12 +2078,14 @@ edited_slot_df = st.data_editor(
     },
 ).copy()
 
-# Save edits first
+# Save edits ONLY (no auto calc)
 st.session_state["slot_df"] = edited_slot_df.copy()
 
-# THEN apply calculation AFTER edit
-slot_df = apply_calc_unit_acres(st.session_state["slot_df"].copy())
-st.session_state["slot_df"] = slot_df
+slot_df = st.session_state["slot_df"].copy()
+
+if st.button("Recalculate Unit Acres"):
+    st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"].copy())
+    st.rerun()
 
 run_model_clicked = st.button("Run Model", type="primary")
 
@@ -2464,7 +2466,7 @@ if (
     
     prod_chart_stacked = build_production_profile_chart(
         deal_df,
-        chart_view="Stacked BOE/d",
+        chart_view="Stacked Mcfe/d",
     )
     
     email_html = build_email_html(
