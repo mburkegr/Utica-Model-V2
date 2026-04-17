@@ -2042,10 +2042,13 @@ if load_slots_clicked:
     st.session_state["slot_df"] = resize_slot_df(st.session_state["slot_df"], num_slots)
     st.session_state["model_has_run"] = False
 
-slot_df_display = apply_calc_unit_acres(st.session_state["slot_df"].copy())
+# Initialize once
+if "slot_df" not in st.session_state:
+    st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"].copy())
 
-slot_df = st.data_editor(
-    slot_df_display,
+# Show editor directly from session state
+edited_slot_df = st.data_editor(
+    st.session_state["slot_df"],
     num_rows="fixed",
     use_container_width=True,
     key="slot_editor",
@@ -2075,7 +2078,11 @@ slot_df = st.data_editor(
     },
 ).copy()
 
-slot_df = apply_calc_unit_acres(slot_df)
+# Save edits first
+st.session_state["slot_df"] = edited_slot_df.copy()
+
+# THEN apply calculation AFTER edit
+slot_df = apply_calc_unit_acres(st.session_state["slot_df"].copy())
 st.session_state["slot_df"] = slot_df
 
 run_model_clicked = st.button("Run Model", type="primary")
