@@ -945,10 +945,14 @@ def style_quarterly_output_table(display_df, row_styles):
             "background-color": "white",
         })
         .set_properties(subset=separator_cols, **{
-            "background-color": "white",
-            "width": "8px",
-            "border-left": f"3px solid {QUARTERLY_HEADER_COLOR}",
+            "background-color": QUARTERLY_HEADER_COLOR,
+            "width": "4px",
+            "min-width": "4px",
+            "max-width": "4px",
+            "padding": "0",
+            "border": "none",
         })
+
         .set_table_styles([
             {
                 "selector": "table",
