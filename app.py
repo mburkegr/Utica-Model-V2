@@ -530,26 +530,25 @@ def build_heatmap(
             xanchor="left",
             y=0.98,
             yanchor="top",
-            font=dict(size=18, color="black")  # ✅ force black
+            font=dict(size=22, color="black")
         ),
-        font=dict(color="black"),  # ✅ THIS is the key global fix
-        xaxis=dict(
-            title=dict(text=x_title, font=dict(color="black")),
-            tickfont=dict(color="black"),
-            side="top",
-            type="category",
-            automargin=True
-        ),
-        yaxis=dict(
-            title=dict(text=y_title, font=dict(color="black")),
-            tickfont=dict(color="black"),
-            type="category",
-            automargin=True
-        ),
-        margin=dict(l=90, r=20, t=80, b=50),
-        height=360,
+        font=dict(size=16, color="black"),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=90, r=20, t=90, b=60),
+        height=390,
     )
 
+    fig.update_xaxes(
+        tickfont=dict(size=14, color="black"),
+        title_font=dict(size=16, color="black"),
+    )
+    
+    fig.update_yaxes(
+        tickfont=dict(size=14, color="black"),
+        title_font=dict(size=16, color="black"),
+    )
+    
     if base_x is not None and base_y is not None:
         try:
             x_vals_raw = list(heatmap_df.columns)
