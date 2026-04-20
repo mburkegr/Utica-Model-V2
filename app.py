@@ -1801,13 +1801,52 @@ def build_email_html(
     tc_table_html = tc_output_styler.to_html()
     quarterly_table_html = quarterly_output_styler.to_html()
 
-    sensitivities_html = "".join([
-        "<h3 style='margin-bottom:8px;'>Sensitivities:</h3>",
-        html_img_from_fig(irr_oil_bid_heatmap, width=1100, height=450, title="Oil Price IRR"),
-        html_img_from_fig(irr_gas_bid_heatmap, width=1100, height=450, title="Gas Price IRR"),
-        html_img_from_fig(irr_heatmap, width=1100, height=450, title="D&C Costs IRR"),
-        html_img_from_fig(irr_tcrisk_bid_heatmap, width=1100, height=450, title="TC Risk IRR"),
-    ])
+    sensitivities_html = f"""
+    <h3 style='margin-bottom:8px;'>Sensitivities:</h3>
+    
+    <table role="presentation" style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+        <tr>
+            <td style="width:50%; vertical-align:top; padding-right:10px;">
+                {html_img_from_fig(
+                    irr_oil_bid_heatmap,
+                    width=1100,
+                    height=450,
+                    title="Oil Price IRR",
+                    max_width_px=760,
+                )}
+            </td>
+            <td style="width:50%; vertical-align:top; padding-left:10px;">
+                {html_img_from_fig(
+                    irr_gas_bid_heatmap,
+                    width=1100,
+                    height=450,
+                    title="Gas Price IRR",
+                    max_width_px=760,
+                )}
+            </td>
+        </tr>
+        <tr>
+            <td style="width:50%; vertical-align:top; padding-right:10px;">
+                {html_img_from_fig(
+                    irr_heatmap,
+                    width=1100,
+                    height=450,
+                    title="D&C Costs IRR",
+                    max_width_px=760,
+                )}
+            </td>
+            <td style="width:50%; vertical-align:top; padding-left:10px;">
+                {html_img_from_fig(
+                    irr_tcrisk_bid_heatmap,
+                    width=1100,
+                    height=450,
+                    title="TC Risk IRR",
+                    max_width_px=760,
+                )}
+            </td>
+        </tr>
+    </table>
+    """
     
     charts_html = "".join([
         "<h3 style='margin-bottom:8px;'>Charts:</h3>",
