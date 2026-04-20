@@ -202,6 +202,18 @@ def inject_app_css():
             filter: brightness(1.03) !important;
         }}
 
+        div[data-testid="stFormSubmitButton"] button {
+            background-color: #2E4D6A !important;
+            color: white !important;
+            border: 1px solid #2E4D6A !important;
+            font-weight: 700 !important;
+            border-radius: 10px !important;
+        }
+        
+        div[data-testid="stFormSubmitButton"] button:hover {
+            filter: brightness(1.05) !important;
+        }
+
         div[data-testid="stExpander"] summary {{
             background-color: {QUARTERLY_HEADER_COLOR} !important;
             color: white !important;
@@ -1036,7 +1048,6 @@ def build_tc_assumptions_output_display_table(slot_df):
     add_data("Gross Wells", {k: fmt_num(v["gross_wells"], decimals=2) for k, v in slot_map.items()})
     add_data("Net Acres", {k: fmt_num(v["net_acres"], decimals=1) for k, v in slot_map.items()})
     add_data("Unit Acres", {k: fmt_num(v["unit_acres"], decimals=0) for k, v in slot_map.items()})
-    add_data("Calc Unit Acres", {k: "Yes" if bool(v["use_calc_unit_acres"]) else "No" for k, v in slot_map.items()})
     add_data("% Unitized", {k: fmt_pct(v["pct_unitized"], decimals=0) for k, v in slot_map.items()})
     add_data("Spud Month", {k: fmt_date(v["drilling_spud_month"]) for k, v in slot_map.items()})
     add_data("Flowback Delay", {k: fmt_num(v["flowback_delay"], decimals=0) for k, v in slot_map.items()})
@@ -2075,7 +2086,10 @@ with st.form("slot_inputs_form"):
         },
     ).copy()
 
-    apply_slot_changes = st.form_submit_button("Apply Slot Changes")
+    apply_slot_changes = st.form_submit_button(
+        "Apply Slot Changes",
+        type="primary",
+    )
 
 if apply_slot_changes:
     st.session_state["slot_df"] = apply_calc_unit_acres(edited_slot_df.copy())
