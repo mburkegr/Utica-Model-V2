@@ -270,11 +270,11 @@ def build_slot_template(num_slots):
             {
                 "slot_id": i,
                 "tc_name": "Choose TC",
-                "gross_wells": 2.0,
-                "net_acres": 28.6,
-                "unit_acres": 800.0,
+                "gross_wells": 1.0,
+                "net_acres": 25,
+                "unit_acres": 200.0,
                 "use_calc_unit_acres": False,
-                "pct_unitized": 0.90,
+                "pct_unitized": 1.0,
                 "drilling_spud_month": next_month_start(),
                 "flowback_delay": 4,
                 "net_revenue_interest": 0.80,
@@ -286,10 +286,10 @@ def build_slot_template(num_slots):
                 "gas_diff": -3.00,
                 "ngl_diff": 0.00,
                 "oil_opex_bbl": 1.78,
-                "gas_opex_mcf": 0.04,
+                "gas_opex_mcf": 0.25,
                 "ngl_opex": 2.50,
                 "fixed_loe": 3534.0,
-                "ngl_yield": 5.2,
+                "ngl_yield": 3.0,
             }
         )
     return pd.DataFrame(rows)
@@ -1129,17 +1129,30 @@ def build_tc_assumptions_output_display_table(slot_df, all_slots_df=None):
 
         for slot_name, v in slot_map.items():
             slot_id = int(v["slot_id"])
-            ll = float(v["lateral_length"]) if pd.notnull(v["lateral_length"]) and float(v["lateral_length"]) != 0 else None
+            gross_wells = (
+                float(v["gross_wells"])
+                if pd.notnull(v["gross_wells"]) and float(v["gross_wells"]) != 0
+                else None
+            )
+            lateral_length = (
+                float(v["lateral_length"])
+                if pd.notnull(v["lateral_length"]) and float(v["lateral_length"]) != 0
+                else None
+            )
+
+            total_lateral_feet = None
+            if gross_wells is not None and lateral_length is not None:
+                total_lateral_feet = gross_wells * lateral_length
 
             if slot_id in eur_map:
                 gas_shrink_pct[slot_name] = eur_map[slot_id].get("slot_shrink", None)
 
-                if ll:
+                if total_lateral_feet:
                     total_gross_oil = eur_map[slot_id].get("slot_gross_oil_production", 0.0)
                     total_gross_gas = eur_map[slot_id].get("slot_gross_gas_production", 0.0)
 
-                    oil_eur_per_ft[slot_name] = total_gross_oil / ll
-                    gas_eur_per_ft[slot_name] = (total_gross_gas / 1000.0) / ll  # MMcf/ft
+                    oil_eur_per_ft[slot_name] = total_gross_oil / total_lateral_feet
+                    gas_eur_per_ft[slot_name] = (total_gross_gas / 1000.0) / total_lateral_feet
 
     add_section("Development")
     add_data("Type Curve", {k: str(v["tc_name"]) for k, v in slot_map.items()})
