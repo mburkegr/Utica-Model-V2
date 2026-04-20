@@ -1671,7 +1671,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             "<br><sup>Color = D&C | Marker Size = TC Risk</sup>"
         ),
         height=700,
-        margin=dict(l=50, r=30, t=95, b=150),
+        margin=dict(l=50, r=30, t=165, b=150),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
