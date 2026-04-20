@@ -960,6 +960,7 @@ def style_quarterly_output_table(display_df, row_styles):
                     ("border-collapse", "collapse"),
                     ("border-spacing", "0"),
                     ("width", "100%"),
+                    ("table-layout", "fixed"),   # 🔥 KEY LINE
                 ],
             },
             {
@@ -984,11 +985,15 @@ def style_quarterly_output_table(display_df, row_styles):
                 "props": [
                     ("text-align", "left"),
                     ("white-space", "pre"),
+                    ("width", "220px"),
                 ],
             },
             {
                 "selector": "tbody td:not(.col0)",
-                "props": [("text-align", "right")],
+                "props": [
+                    ("text-align", "right"),
+                    ("width", "80px"),
+                ],
             },
             {
                 "selector": f"tbody tr:nth-child({len(display_df)}) td",
