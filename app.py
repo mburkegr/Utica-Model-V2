@@ -1048,7 +1048,7 @@ def style_quarterly_output_table(display_df, row_styles):
     )
 
 
-def build_tc_assumptions_output_display_table(slot_df):
+def build_tc_assumptions_output_display_table(slot_df, all_slots_df=None, deal_inputs=None):
     df = slot_df.copy()
 
     if df.empty:
@@ -1086,7 +1086,13 @@ def build_tc_assumptions_output_display_table(slot_df):
         slot_map[slot_name] = r
 
     def fmt_num(x, decimals=1, prefix="", suffix=""):
-        return format_accounting_number(x, decimals=decimals, prefix=prefix, suffix=suffix, null_as_blank=False)
+        return format_accounting_number(
+            x,
+            decimals=decimals,
+            prefix=prefix,
+            suffix=suffix,
+            null_as_blank=False,
+        )
 
     def fmt_pct(x, decimals=0):
         return format_accounting_percent(x, decimals=decimals, null_as_blank=False)
@@ -1095,6 +1101,62 @@ def build_tc_assumptions_output_display_table(slot_df):
         if pd.isnull(x):
             return "-"
         return pd.to_datetime(x).strftime("%Y-%m-%d")
+
+    def calc_gas_shrink_pct(deal_inputs):
+        if deal_inputs is None:
+            return None
+
+        if deal_inputs.get("ethane_rec", False):
+            ethane_rec = deal_inputs.get("rec_ethane", 0.0)
+            propane_rec = deal_inputs.get("rec_propane", 0.0)
+            isobutane_rec = deal_inputs.get("rec_isobutane", 0.0)
+            butane_rec = deal_inputs.get("rec_butane", 0.0)
+            pentanes_rec = deal_inputs.get("rec_pentanes", 0.0)
+        else:
+            ethane_rec = deal_inputs.get("rej_ethane", 0.0)
+            propane_rec = deal_inputs.get("rej_propane", 0.0)
+            isobutane_rec = deal_inputs.get("rej_isobutane", 0.0)
+            butane_rec = deal_inputs.get("rej_butane", 0.0)
+            pentanes_rec = deal_inputs.get("rej_pentanes", 0.0)
+
+        gas_shrink = (
+            deal_inputs.get("content_ethane", 0.0) * ethane_rec * deal_inputs.get("shrink_ethane", 0.0)
+            + deal_inputs.get("content_propane", 0.0) * propane_rec * deal_inputs.get("shrink_propane", 0.0)
+            + deal_inputs.get("content_isobutane", 0.0) * isobutane_rec * deal_inputs.get("shrink_isobutane", 0.0)
+            + deal_inputs.get("content_butane", 0.0) * butane_rec * deal_inputs.get("shrink_butane", 0.0)
+            + deal_inputs.get("content_pentanes", 0.0) * pentanes_rec * deal_inputs.get("shrink_pentanes", 0.0)
+        )
+
+        return gas_shrink
+
+    gas_shrink_pct = calc_gas_shrink_pct(deal_inputs)
+
+    oil_eur_per_ft = {k: None for k in slot_map.keys()}
+    gas_eur_per_ft = {k: None for k in slot_map.keys()}
+
+    if all_slots_df is not None and not all_slots_df.empty:
+        eur_df = all_slots_df.copy()
+        eur_df["slot_id"] = pd.to_numeric(eur_df["slot_id"], errors="coerce")
+
+        eur_summary = (
+            eur_df.groupby("slot_id", as_index=False)[
+                ["slot_net_oil_production", "slot_net_gas_production"]
+            ]
+            .sum()
+        )
+
+        eur_map = eur_summary.set_index("slot_id").to_dict("index")
+
+        for slot_name, v in slot_map.items():
+            slot_id = int(v["slot_id"])
+            ll = float(v["lateral_length"]) if pd.notnull(v["lateral_length"]) and float(v["lateral_length"]) != 0 else None
+
+            if ll and slot_id in eur_map:
+                total_oil_bbl = eur_map[slot_id].get("slot_net_oil_production", 0.0)
+                total_gas_mcf = eur_map[slot_id].get("slot_net_gas_production", 0.0)
+
+                oil_eur_per_ft[slot_name] = total_oil_bbl / ll
+                gas_eur_per_ft[slot_name] = (total_gas_mcf / 1000.0) / ll  # MMcf/ft
 
     add_section("Development")
     add_data("Type Curve", {k: str(v["tc_name"]) for k, v in slot_map.items()})
@@ -1106,6 +1168,7 @@ def build_tc_assumptions_output_display_table(slot_df):
     add_data("Flowback Delay", {k: fmt_num(v["flowback_delay"], decimals=0) for k, v in slot_map.items()})
     add_data("NRI", {k: fmt_pct(v["net_revenue_interest"], decimals=0) for k, v in slot_map.items()})
     add_data("Lateral Length (ft)", {k: fmt_num(v["lateral_length"], decimals=0) for k, v in slot_map.items()})
+    add_data("Gas Shrink %", {k: fmt_pct(gas_shrink_pct, decimals=1) for k in slot_map.keys()})
 
     add_gap()
 
@@ -1115,6 +1178,8 @@ def build_tc_assumptions_output_display_table(slot_df):
     add_data("$/Acre Bid", {k: fmt_num(v["bid_per_acre"], decimals=0, prefix="$") for k, v in slot_map.items()})
     add_data("Oil Diff", {k: fmt_num(v["oil_diff"], decimals=2, prefix="$") for k, v in slot_map.items()})
     add_data("Gas Diff", {k: fmt_num(v["gas_diff"], decimals=2, prefix="$") for k, v in slot_map.items()})
+    add_data("Oil EUR (Bbl/ft)", {k: fmt_num(oil_eur_per_ft[k], decimals=2) for k in slot_map.keys()})
+    add_data("Gas EUR (MMcf/ft)", {k: fmt_num(gas_eur_per_ft[k], decimals=3) for k in slot_map.keys()})
 
     add_gap()
 
@@ -1127,7 +1192,6 @@ def build_tc_assumptions_output_display_table(slot_df):
 
     display_df = pd.DataFrame(rows)
     return display_df, row_styles
-
 
 def style_tc_assumptions_output_table(display_df, row_styles):
     style_map = pd.Series(row_styles, index=display_df.index)
@@ -2524,7 +2588,11 @@ if (
 
     st.subheader("Outputs")
     
-    tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(slot_df)
+    tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(
+        slot_df=slot_df,
+        all_slots_df=all_slots_df,
+        deal_inputs=deal_inputs,
+    )
     tc_output_styler = style_tc_assumptions_output_table(
         tc_output_display_df,
         tc_output_row_styles,
