@@ -8,7 +8,16 @@ from plotly.subplots import make_subplots
 import streamlit as st
 import base64
 
-from model import run_deal_model
+from model import (
+    run_deal_model,
+    load_type_curve_library,
+    prepare_slot_inputs,
+    prepare_deal_settings,
+    prepare_global_assumptions,
+    calc_slot_metrics,
+    build_slot_ngl_factors,
+    run_single_slot_economics,
+)
 
 st.set_page_config(page_title="Utica Deal Model", layout="wide")
 
