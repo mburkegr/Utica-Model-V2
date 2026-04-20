@@ -202,17 +202,17 @@ def inject_app_css():
             filter: brightness(1.03) !important;
         }}
 
-        div[data-testid="stFormSubmitButton"] button {
+        div[data-testid="stFormSubmitButton"] button {{
             background-color: #2E4D6A !important;
             color: white !important;
             border: 1px solid #2E4D6A !important;
             font-weight: 700 !important;
             border-radius: 10px !important;
-        }
+        }}
         
-        div[data-testid="stFormSubmitButton"] button:hover {
+        div[data-testid="stFormSubmitButton"] button:hover {{
             filter: brightness(1.05) !important;
-        }
+        }}
 
         div[data-testid="stExpander"] summary {{
             background-color: {QUARTERLY_HEADER_COLOR} !important;
