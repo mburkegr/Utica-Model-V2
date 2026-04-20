@@ -520,7 +520,7 @@ def build_heatmap(
             zmax=zmax,
             showscale=False,
             hovertemplate=f"{x_title}: %{{x}}<br>{y_title}: %{{y}}<br>Value: %{{text}}<extra></extra>",
-            textfont=dict(size=14),
+            textfont=dict(size=16),
         )
     )
 
