@@ -1519,13 +1519,14 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         rows=1,
         cols=3,
         shared_yaxes=True,
-        horizontal_spacing=0.84,
+        horizontal_spacing=0.03,
         subplot_titles=[
             f"Downside<br>(${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})",
             f"Base<br>(${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})",
             f"Upside<br>(${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})",
         ]
     )
+    
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
     legend_seen = set()
     tc_jitter = {
