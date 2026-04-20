@@ -1512,9 +1512,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     }
 
     size_map = {
-        0.80: 8,
-        1.00: 14,
-        1.20: 22,
+        0.80: 10,
+        1.00: 20,
+        1.20: 32,
     }
 
     dc_label_map = {
@@ -1527,7 +1527,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         rows=1,
         cols=3,
         shared_yaxes=True,
-        horizontal_spacing=0.08,
+        horizontal_spacing=0.12,
     )
     
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
@@ -1674,7 +1674,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             "<br><sup>Color = D&C | Marker Size = TC Risk</sup>"
         ),
         height=900,
-        margin=dict(l=70, r=50, t=170, b=170),
+        margin=dict(l=80, r=60, t=190, b=190),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
@@ -1815,10 +1815,9 @@ def build_email_html(
         html_img_from_fig(prod_chart_stacked, width=1100, height=520, title="Production in BOE/d"),
         html_img_from_fig(
             scenario_scatter_chart,
-            width=2200,
-            height=950,
-            title="Scenario Matrix",
-            max_width_px=1600,
+            width=2600,
+            height=1100,
+            max_width_px=1800,
         )
     ])
 
