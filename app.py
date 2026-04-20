@@ -1047,8 +1047,52 @@ def style_quarterly_output_table(display_df, row_styles):
         ], overwrite=False)
     )
 
+def calc_slot_eur_metrics(slot_row, deal_inputs):
+    type_curve_library = load_type_curve_library("type_curve_library.xlsx")
+    deal_settings = prepare_deal_settings(deal_inputs)
+    global_assumptions = prepare_global_assumptions(deal_inputs)
 
-def build_tc_assumptions_output_display_table(slot_df, all_slots_df=None):
+    slot_inputs_df = prepare_slot_inputs(pd.DataFrame([slot_row]), deal_inputs)
+    slot_prepped = slot_inputs_df.iloc[0].copy()
+
+    total_net_acres = float(slot_prepped.get("net_acres", 0.0))
+
+    slot_prepped = calc_slot_metrics(
+        slot_prepped,
+        deal_settings=deal_settings,
+        total_net_acres=total_net_acres,
+    )
+
+    slot_ngl = build_slot_ngl_factors(
+        slot=slot_prepped,
+        global_assumptions=global_assumptions,
+        content_percentages=global_assumptions["content_percentages"],
+        recover_ethane_percentages=global_assumptions["recover_ethane_percentages"],
+        reject_ethane_percentages=global_assumptions["reject_ethane_percentages"],
+        ngl_prices=global_assumptions["ngl_prices"],
+        ngl_shrink_factors=global_assumptions["ngl_shrink_factors"],
+    )
+
+    one_well_df = run_single_slot_economics(
+        slot=slot_prepped,
+        type_curve_library=type_curve_library,
+        global_assumptions=global_assumptions,
+        slot_ngl=slot_ngl,
+    ).copy()
+
+    prod_df = one_well_df[one_well_df["period"].between(1, 360)].copy()
+
+    lateral_length = float(slot_prepped["lateral_length"])
+    if lateral_length == 0:
+        return None, None, float(slot_ngl["shrink"])
+
+    oil_eur_per_ft = prod_df["gross_oil_production"].sum() / lateral_length
+    gas_eur_per_ft = prod_df["gross_gas_production"].sum() / lateral_length
+    gas_shrink = float(slot_ngl["shrink"])
+
+    return oil_eur_per_ft, gas_eur_per_ft, gas_shrink
+
+def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     df = slot_df.copy()
 
     if df.empty:
@@ -1106,54 +1150,60 @@ def build_tc_assumptions_output_display_table(slot_df, all_slots_df=None):
     oil_eur_per_ft = {k: None for k in slot_map.keys()}
     gas_eur_per_ft = {k: None for k in slot_map.keys()}
 
-    if all_slots_df is not None and not all_slots_df.empty:
-        eur_df = all_slots_df.copy()
-        eur_df["slot_id"] = pd.to_numeric(eur_df["slot_id"], errors="coerce")
+    for slot_name, v in slot_map.items():
+        slot_one_row_df = pd.DataFrame([v]).copy()
 
-        eur_summary = (
-            eur_df.groupby("slot_id", as_index=False)[
-                [
-                    "slot_shrink",
-                    "slot_gross_oil_production",
-                    "slot_gross_gas_production",
-                ]
-            ]
-            .agg({
-                "slot_shrink": "max",
-                "slot_gross_oil_production": "sum",
-                "slot_gross_gas_production": "sum",
-            })
+        slot_inputs_prepped = prepare_slot_inputs(slot_one_row_df, deal_inputs)
+        slot_prepped = slot_inputs_prepped.iloc[0].copy()
+
+        deal_settings = prepare_deal_settings(deal_inputs)
+        global_assumptions = prepare_global_assumptions(deal_inputs)
+        type_curve_library = load_type_curve_library("type_curve_library.xlsx")
+
+        total_net_acres = float(slot_prepped.get("net_acres", 0.0))
+
+        slot_prepped = calc_slot_metrics(
+            slot_prepped,
+            deal_settings=deal_settings,
+            total_net_acres=total_net_acres,
         )
 
-        eur_map = eur_summary.set_index("slot_id").to_dict("index")
+        slot_ngl = build_slot_ngl_factors(
+            slot=slot_prepped,
+            global_assumptions=global_assumptions,
+            content_percentages=global_assumptions["content_percentages"],
+            recover_ethane_percentages=global_assumptions["recover_ethane_percentages"],
+            reject_ethane_percentages=global_assumptions["reject_ethane_percentages"],
+            ngl_prices=global_assumptions["ngl_prices"],
+            ngl_shrink_factors=global_assumptions["ngl_shrink_factors"],
+        )
 
-        for slot_name, v in slot_map.items():
-            slot_id = int(v["slot_id"])
-            gross_wells = (
-                float(v["gross_wells"])
-                if pd.notnull(v["gross_wells"]) and float(v["gross_wells"]) != 0
-                else None
+        one_well_df = run_single_slot_economics(
+            slot=slot_prepped,
+            type_curve_library=type_curve_library,
+            global_assumptions=global_assumptions,
+            slot_ngl=slot_ngl,
+        ).copy()
+
+        prod_df = one_well_df[one_well_df["period"].between(1, 360)].copy()
+
+        lateral_length = (
+            float(slot_prepped["lateral_length"])
+            if pd.notnull(slot_prepped["lateral_length"]) and float(slot_prepped["lateral_length"]) != 0
+            else None
+        )
+
+        gas_shrink_pct[slot_name] = float(slot_ngl["shrink"])
+
+        if lateral_length:
+            oil_eur_per_ft[slot_name] = round(
+                prod_df["gross_oil_production"].sum() / lateral_length,
+                0,
             )
-            lateral_length = (
-                float(v["lateral_length"])
-                if pd.notnull(v["lateral_length"]) and float(v["lateral_length"]) != 0
-                else None
+            gas_eur_per_ft[slot_name] = round(
+                prod_df["gross_gas_production"].sum() / lateral_length,
+                0,
             )
-
-            total_lateral_feet = None
-            if gross_wells is not None and lateral_length is not None:
-                total_lateral_feet = gross_wells * lateral_length
-
-            if slot_id in eur_map:
-                gas_shrink_pct[slot_name] = eur_map[slot_id].get("slot_shrink", None)
-
-                if total_lateral_feet:
-                    total_gross_oil = eur_map[slot_id].get("slot_gross_oil_production", 0.0)
-                    total_gross_gas = eur_map[slot_id].get("slot_gross_gas_production", 0.0)
-
-                    oil_eur_per_ft[slot_name] = total_gross_oil / total_lateral_feet
-                    gas_eur_per_ft[slot_name] = total_gross_gas / total_lateral_feet
-
     add_section("Development")
     add_data("Type Curve", {k: str(v["tc_name"]) for k, v in slot_map.items()})
     add_data("Gross Wells", {k: fmt_num(v["gross_wells"], decimals=2) for k, v in slot_map.items()})
@@ -2587,7 +2637,7 @@ if (
     
     tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(
         slot_df=slot_df,
-        all_slots_df=all_slots_df,
+        deal_inputs=deal_inputs,
     )
     tc_output_styler = style_tc_assumptions_output_table(
         tc_output_display_df,
