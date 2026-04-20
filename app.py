@@ -1281,13 +1281,14 @@ def build_production_profile_chart(deal_df, chart_view="Stacked Mcfe/d"):
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.16,
+            y=-0.18,
             xanchor="center",
             x=0.5,
-            font=dict(color="black"),
+            font=dict(size=13, color="black"),
             traceorder="normal",
-            entrywidth=140,
+            entrywidth=180,
             entrywidthmode="pixels",
+            tracegroupgap=20,
         )
     )
     
