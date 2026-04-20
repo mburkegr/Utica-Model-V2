@@ -1278,18 +1278,19 @@ def build_production_profile_chart(deal_df, chart_view="Stacked Mcfe/d"):
             title=dict(text="Net Production (Mcfe/d)", font=dict(color="black")),
             tickfont=dict(color="black"),
         ),
+        
         legend=dict(
             orientation="h",
             yanchor="top",
             y=-0.18,
             xanchor="center",
             x=0.5,
-            font=dict(size=13, color="black"),
+            font=dict(size=16, color="black"),
             traceorder="normal",
-            entrywidth=180,
+            entrywidth=200,
             entrywidthmode="pixels",
-            tracegroupgap=20,
-        )
+            tracegroupgap=28,
+        ),
     )
     
     fig.update_xaxes(
@@ -1527,7 +1528,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         rows=1,
         cols=3,
         shared_yaxes=True,
-        horizontal_spacing=0.12,
+        horizontal_spacing=0.06,
     )
     
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
@@ -1639,8 +1640,8 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
                 name="Current Base Point",
                 marker=dict(
                     color="#1F4E79",
-                    size=18,
-                    line=dict(color="black", width=2),
+                    size=24,
+                    line=dict(color="black", width=3),
                     opacity=1.0,
                 ),
                 hovertemplate="Current Base Point<br>Bid: $%{x:,.0f}<br>IRR: %{y:.1%}<extra></extra>",
@@ -1676,7 +1677,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             font=dict(size=26, color="black"),
         ),
         height=1000,
-        margin=dict(l=80, r=60, t=210, b=190),
+        margin=dict(l=80, r=60, t=195, b=165),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
@@ -1694,17 +1695,17 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
     
     fig.update_xaxes(
-        tickfont=dict(size=14, color="black"),
-        title_font=dict(size=16, color="black"),
+        tickfont=dict(size=16, color="black"),
+        title_font=dict(size=18, color="black"),
     )
     
     fig.update_yaxes(
-        tickfont=dict(size=14, color="black"),
-        title_font=dict(size=16, color="black"),
+        tickfont=dict(size=16, color="black"),
+        title_font=dict(size=18, color="black"),
     )
 
     fig.add_annotation(
-        x=0.15, y=1.04,
+        x=0.165, y=1.04,
         xref="paper", yref="paper",
         text=f"<b>Downside (Oil {pricing_cases[0][1]:.0f} / Gas {pricing_cases[0][2]:.2f})</b>",
         showarrow=False,
@@ -1724,7 +1725,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
     
     fig.add_annotation(
-        x=0.85, y=1.04,
+        x=0.835, y=1.04,
         xref="paper", yref="paper",
         text=f"<b>Upside (Oil {pricing_cases[2][1]:.0f} / Gas {pricing_cases[2][2]:.2f})</b>",
         showarrow=False,
