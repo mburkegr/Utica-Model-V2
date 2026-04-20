@@ -1698,7 +1698,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
     
     fig.update_annotations(
-        font=dict(size=16, color="black"),
+        font=dict(size=13, color="black"),
         align="center"
     )
     
