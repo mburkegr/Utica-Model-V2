@@ -1730,7 +1730,7 @@ def fig_to_base64_png(fig, width=1200, height=700):
         return None
 
 
-def html_img_from_fig(fig, width=900, height=500, title="Chart"):
+def html_img_from_fig(fig, width=900, height=500, title="Chart", max_width_px=None):
     img_b64 = fig_to_base64_png(fig, width=width, height=height)
 
     if img_b64 is None:
@@ -1741,8 +1741,12 @@ def html_img_from_fig(fig, width=900, height=500, title="Chart"):
         </div>
         """
 
-    return f'<img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:900px; margin:12px 0 20px 0;">'
+    max_width_style = f"max-width:{max_width_px}px;" if max_width_px else f"max-width:{width}px;"
 
+    return f'''
+        <img src="data:image/png;base64,{img_b64}"
+             style="width:100%; {max_width_style} margin:12px 0 20px 0; display:block;">
+    '''
 
 def build_email_html(
     opportunity_name,
