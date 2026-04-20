@@ -1807,7 +1807,7 @@ def build_email_html(
     sensitivities_html = f"""
     <h3 style='margin-bottom:8px;'>Sensitivities:</h3>
     
-    <table role="presentation" style="width:auto; border-collapse:collapse; margin:0 auto 20px auto;">
+    <table role="presentation" style="width:auto; border-collapse:collapse; margin:0 0 20px 0;">
         <tr>
             <td style="vertical-align:top; padding:0 8px 12px 8px;">
                 {html_img_from_fig(
