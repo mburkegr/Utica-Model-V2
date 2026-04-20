@@ -1519,12 +1519,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         rows=1,
         cols=3,
         shared_yaxes=True,
-        horizontal_spacing=0.03,
-        subplot_titles=[
-            f"Downside<br>(${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})",
-            f"Base<br>(${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})",
-            f"Upside<br>(${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})",
-        ]
+        horizontal_spacing=0.08,
     )
     
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
@@ -1671,7 +1666,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             "<br><sup>Color = D&C | Marker Size = TC Risk</sup>"
         ),
         height=700,
-        margin=dict(l=50, r=30, t=165, b=150),
+        margin=dict(l=50, r=30, t=130, b=150),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
@@ -1697,10 +1692,32 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         tickfont=dict(color="black"),
         title_font=dict(color="black"),
     )
+
+    fig.add_annotation(
+        x=0.15, y=1.08,
+        xref="paper", yref="paper",
+        text=f"Downside (${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})",
+        showarrow=False,
+        font=dict(size=16, color="black"),
+        xanchor="center",
+    )
     
-    fig.update_annotations(
-        font=dict(size=13, color="black"),
-        align="center"
+    fig.add_annotation(
+        x=0.50, y=1.08,
+        xref="paper", yref="paper",
+        text=f"Base (${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})",
+        showarrow=False,
+        font=dict(size=16, color="black"),
+        xanchor="center",
+    )
+    
+    fig.add_annotation(
+        x=0.85, y=1.08,
+        xref="paper", yref="paper",
+        text=f"Upside (${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})",
+        showarrow=False,
+        font=dict(size=16, color="black"),
+        xanchor="center",
     )
     
     return fig
