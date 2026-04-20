@@ -1802,7 +1802,13 @@ def build_email_html(
         "<h3 style='margin-bottom:8px;'>Charts:</h3>",
         html_img_from_fig(cum_fcf_chart, width=1100, height=520, title="Cumulative FCF"),
         html_img_from_fig(prod_chart_stacked, width=1100, height=520, title="Production in BOE/d"),
-        html_img_from_fig(scenario_scatter_chart, width=2000, height=750, title="Scenario Matrix")
+        html_img_from_fig(
+            scenario_scatter_chart,
+            width=2200,
+            height=950,
+            title="Scenario Matrix",
+            max_width_px=1600,
+        )
     ])
 
     html = f"""
