@@ -1221,21 +1221,25 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     add_data("% Unitized", {k: fmt_pct(v["pct_unitized"], decimals=0) for k, v in slot_map.items()})
     add_data("Spud Month", {k: fmt_date(v["drilling_spud_month"]) for k, v in slot_map.items()})
     add_data("Flowback Delay", {k: fmt_num(v["flowback_delay"], decimals=0) for k, v in slot_map.items()})
-    add_data("NRI", {k: fmt_pct(v["net_revenue_interest"], decimals=0) for k, v in slot_map.items()})
     add_data("Lateral Length (ft)", {k: fmt_num(v["lateral_length"], decimals=0) for k, v in slot_map.items()})
+
+    add_gap()
+
+    add_section("Production")
+    add_data("TC Risk", {k: fmt_pct(v["tc_risk"], decimals=0) for k, v in slot_map.items()})
+    add_data("NRI", {k: fmt_pct(v["net_revenue_interest"], decimals=0) for k, v in slot_map.items()})
     add_data("Gas Shrink %", {k: fmt_pct(gas_shrink_pct[k], decimals=1) for k in slot_map.keys()})
     add_data("Oil EUR (Bbl/ft)", {k: fmt_num(oil_eur_per_ft[k], decimals=0) for k in slot_map.keys()})
     add_data("Gas EUR (Mcf/ft)", {k: fmt_num(gas_eur_per_ft[k], decimals=0) for k in slot_map.keys()})
+    add_data("NGL Yield", {k: fmt_num(v["ngl_yield"], decimals=2) for k, v in slot_map.items()})
 
     add_gap()
 
     add_section("Economics")
     add_data("D&C ($/ft)", {k: fmt_num(v["dc_costs"], decimals=0, prefix="$") for k, v in slot_map.items()})
-    add_data("TC Risk", {k: fmt_pct(v["tc_risk"], decimals=0) for k, v in slot_map.items()})
     add_data("$/Acre Bid", {k: fmt_num(v["bid_per_acre"], decimals=0, prefix="$") for k, v in slot_map.items()})
     add_data("Oil Diff", {k: fmt_num(v["oil_diff"], decimals=2, prefix="$") for k, v in slot_map.items()})
     add_data("Gas Diff", {k: fmt_num(v["gas_diff"], decimals=2, prefix="$") for k, v in slot_map.items()})
-
 
     add_gap()
 
@@ -1243,8 +1247,7 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     add_data("Oil Opex", {k: fmt_num(v["oil_opex_bbl"], decimals=2, prefix="$") for k, v in slot_map.items()})
     add_data("Gas Opex", {k: fmt_num(v["gas_opex_mcf"], decimals=2, prefix="$") for k, v in slot_map.items()})
     add_data("NGL Opex", {k: fmt_num(v["ngl_opex"], decimals=2, prefix="$") for k, v in slot_map.items()})
-    add_data("Fixed LOE", {k: fmt_num(v["fixed_loe"], decimals=0, prefix="$") for k, v in slot_map.items()})
-    add_data("NGL Yield", {k: fmt_num(v["ngl_yield"], decimals=2) for k, v in slot_map.items()}, style="footer")
+    add_data("Fixed LOE", {k: fmt_num(v["fixed_loe"], decimals=0, prefix="$") for k, v in slot_map.items()}, style="footer")
 
     display_df = pd.DataFrame(rows)
     return display_df, row_styles
