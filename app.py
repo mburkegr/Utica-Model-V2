@@ -1291,8 +1291,15 @@ def build_production_profile_chart(deal_df, chart_view="Stacked Mcfe/d"):
         )
     )
     
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
+    fig.update_xaxes(
+        tickfont=dict(size=13, color="black"),
+        title_font=dict(size=15, color="black"),
+    )
+        
+    fig.update_yaxes(
+        tickfont=dict(size=13, color="black"),
+        title_font=dict(size=15, color="black"),
+    )
 
     return fig
 
