@@ -1665,8 +1665,8 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             "Scenario Matrix: IRR vs. $/Acre Bid"
             "<br><sup>Color = D&C | Marker Size = TC Risk</sup>"
         ),
-        height=700,
-        margin=dict(l=50, r=30, t=130, b=150),
+        height=900,
+        margin=dict(l=70, r=50, t=170, b=170),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
