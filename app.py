@@ -520,6 +520,7 @@ def build_heatmap(
             zmax=zmax,
             showscale=False,
             hovertemplate=f"{x_title}: %{{x}}<br>{y_title}: %{{y}}<br>Value: %{{text}}<extra></extra>",
+            textfont=dict(size=14),
         )
     )
 
@@ -534,15 +535,19 @@ def build_heatmap(
         ),
         font=dict(size=16, color="black"),
         xaxis=dict(
-            title=dict(text=x_title, font=dict(size=16, color="black")),
-            tickfont=dict(size=14, color="black"),
+            title=dict(text=x_title, font=dict(size=18, color="black")),
+            tickfont=dict(size=15, color="black"),
             side="top",
             type="category",
             automargin=True,
         ),
         yaxis=dict(
-            title=dict(text=y_title, font=dict(size=16, color="black")),
-            tickfont=dict(size=14, color="black"),
+            title=dict(
+                text=y_title,
+                font=dict(size=18, color="black"),   # 🔥 slightly bigger
+                standoff=20,                         # 🔥 THIS creates gap
+            ),
+            tickfont=dict(size=15, color="black"),   # 🔥 slightly bigger
             type="category",
             automargin=True,
         ),
@@ -1287,7 +1292,7 @@ def build_production_profile_chart(deal_df, chart_view="Stacked Mcfe/d"):
             y=-0.18,
             xanchor="center",
             x=0.5,
-            font=dict(size=16, color="black"),
+            font=dict(size=17, color="black"),
             traceorder="normal",
             entrywidth=200,
             entrywidthmode="pixels",
@@ -1688,17 +1693,17 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             y=-0.20,
             xanchor="center",
             x=0.5,
-            font=dict(size=14, color="black"),
+            font=dict(size=18, color="black"),   # 🔥 bigger legend
             traceorder="normal",
-            entrywidth=180,
+            entrywidth=200,                      # 🔥 slightly wider spacing
             entrywidthmode="pixels",
-            tracegroupgap=24,
+            tracegroupgap=28,
         ),
     )
     
     fig.update_xaxes(
-        tickfont=dict(size=16, color="black"),
-        title_font=dict(size=18, color="black"),
+        tickfont=dict(size=18, color="black"),   # 🔥 bigger ticks
+        title_font=dict(size=20, color="black"), # 🔥 bigger label
     )
     
     fig.update_yaxes(
