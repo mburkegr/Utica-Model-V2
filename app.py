@@ -946,7 +946,7 @@ def style_quarterly_output_table(display_df, row_styles):
         })
         .set_properties(subset=separator_cols, **{
             "background-color": "white",
-            "width": "10px",
+            "width": "8px",
             "border-left": f"3px solid {QUARTERLY_HEADER_COLOR}",
         })
         .set_table_styles([
@@ -1023,6 +1023,13 @@ def style_quarterly_output_table(display_df, row_styles):
                 "selector": "thead th.col0",
                 "props": [
                     ("text-align", "left"),
+                ],
+            },
+            {
+                "selector": "tbody td",
+                "props": [
+                    ("border-top", "none !important"),
+                    ("border-bottom", "none !important"),
                 ],
             },
             {
