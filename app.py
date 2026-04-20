@@ -1669,12 +1669,14 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     )
 
     fig.update_layout(
-        title=(
-            "Scenario Matrix: IRR vs. $/Acre Bid"
-            "<br><sup>Color = D&C | Marker Size = TC Risk</sup>"
+        title=dict(
+            text="Scenario Matrix: IRR vs. $/Acre Bid<br><sup>Color = D&C | Marker Size = TC Risk</sup>",
+            x=0.5,
+            xanchor="center",
+            font=dict(size=26, color="black"),
         ),
-        height=900,
-        margin=dict(l=80, r=60, t=190, b=190),
+        height=1000,
+        margin=dict(l=80, r=60, t=210, b=190),
         plot_bgcolor="white",
         paper_bgcolor="white",
         legend=dict(
@@ -1683,30 +1685,30 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
             y=-0.20,
             xanchor="center",
             x=0.5,
-            font=dict(color="black"),
+            font=dict(size=14, color="black"),
             traceorder="normal",
-            entrywidth=160,
+            entrywidth=180,
             entrywidthmode="pixels",
-            tracegroupgap=20, 
-        )
+            tracegroupgap=24,
+        ),
     )
     
     fig.update_xaxes(
-        tickfont=dict(color="black"),
-        title_font=dict(color="black"),
+        tickfont=dict(size=14, color="black"),
+        title_font=dict(size=16, color="black"),
     )
     
     fig.update_yaxes(
-        tickfont=dict(color="black"),
-        title_font=dict(color="black"),
+        tickfont=dict(size=14, color="black"),
+        title_font=dict(size=16, color="black"),
     )
 
     fig.add_annotation(
         x=0.15, y=1.04,
         xref="paper", yref="paper",
-        text=f"<b>Downside (${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})</b>",
+        text=f"<b>Downside (Oil {pricing_cases[0][1]:.0f} / Gas {pricing_cases[0][2]:.2f})</b>",
         showarrow=False,
-        font=dict(size=20, color="black"),
+        font=dict(size=24, color="black"),
         xanchor="center",
         yanchor="bottom",
     )
@@ -1714,9 +1716,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     fig.add_annotation(
         x=0.50, y=1.04,
         xref="paper", yref="paper",
-        text=f"<b>Base (${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})</b>",
+        text=f"<b>Base (Oil {pricing_cases[1][1]:.0f} / Gas {pricing_cases[1][2]:.2f})</b>",
         showarrow=False,
-        font=dict(size=20, color="black"),
+        font=dict(size=24, color="black"),
         xanchor="center",
         yanchor="bottom",
     )
@@ -1724,9 +1726,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
     fig.add_annotation(
         x=0.85, y=1.04,
         xref="paper", yref="paper",
-        text=f"<b>Upside (${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})</b>",
+        text=f"<b>Upside (Oil {pricing_cases[2][1]:.0f} / Gas {pricing_cases[2][2]:.2f})</b>",
         showarrow=False,
-        font=dict(size=20, color="black"),
+        font=dict(size=24, color="black"),
         xanchor="center",
         yanchor="bottom",
     )
