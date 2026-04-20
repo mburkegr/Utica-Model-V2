@@ -817,7 +817,7 @@ def build_quarterly_output_display_table(df):
         row_styles.append("gap")
 
     def add_data(label, source_row, indent=False, style="normal"):
-        display_label = f"    {label}" if indent else label
+        display_label = f"&nbsp;&nbsp;&nbsp;&nbsp;{label}" if indent else label
         row = {first_col: display_label}
         for c in data_cols:
             row[c] = fmt_value(source_row, c)
