@@ -960,7 +960,8 @@ def style_quarterly_output_table(display_df, row_styles):
                     ("border-collapse", "collapse"),
                     ("border-spacing", "0"),
                     ("width", "100%"),
-                    ("table-layout", "fixed"),   # 🔥 KEY LINE
+                    ("table-layout", "fixed"),
+                    ("border", "none !important"),
                 ],
             },
             {
@@ -968,8 +969,9 @@ def style_quarterly_output_table(display_df, row_styles):
                 "props": [
                     ("padding", "4px 8px"),
                     ("font-size", "12px"),
-                    ("border", "none"),
-                    ("box-shadow", "none"),
+                    ("border", "none !important"),
+                    ("outline", "none !important"),
+                    ("box-shadow", "none !important"),
                 ],
             },
             {
@@ -993,6 +995,26 @@ def style_quarterly_output_table(display_df, row_styles):
                 "props": [
                     ("text-align", "right"),
                     ("width", "80px"),
+                ],
+            },
+            {
+                "selector": "tbody tr",
+                "props": [
+                    ("border", "none !important"),
+                ],
+            },
+            {
+                "selector": "tbody td",
+                "props": [
+                    ("background-clip", "padding-box"),
+                ],
+            },
+            {
+                "selector": "thead th",
+                "props": [
+                    ("border", "none !important"),
+                    ("outline", "none !important"),
+                    ("box-shadow", "none !important"),
                 ],
             },
             {
