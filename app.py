@@ -1758,7 +1758,7 @@ def html_img_from_fig(fig, width=900, height=500, title="Chart", max_width_px=No
 
     return f'''
         <img src="data:image/png;base64,{img_b64}"
-             style="width:100%; {max_width_style} margin:12px 0 20px 0; display:block;">
+             style="width:100%; {max_width_style} height:auto; margin:12px 0 20px 0; display:block;">
     '''
 
 def build_email_html(
