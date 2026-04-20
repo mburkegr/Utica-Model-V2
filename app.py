@@ -1807,9 +1807,9 @@ def build_email_html(
     sensitivities_html = f"""
     <h3 style='margin-bottom:8px;'>Sensitivities:</h3>
     
-    <table role="presentation" style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+    <table role="presentation" style="width:auto; border-collapse:collapse; margin:0 auto 20px auto;">
         <tr>
-            <td style="width:50%; vertical-align:top; padding-right:10px;">
+            <td style="vertical-align:top; padding:0 8px 12px 8px;">
                 {html_img_from_fig(
                     irr_oil_bid_heatmap,
                     width=1100,
@@ -1818,7 +1818,7 @@ def build_email_html(
                     max_width_px=760,
                 )}
             </td>
-            <td style="width:50%; vertical-align:top; padding-left:10px;">
+            <td style="vertical-align:top; padding:0 8px 12px 8px;">
                 {html_img_from_fig(
                     irr_gas_bid_heatmap,
                     width=1100,
@@ -1829,7 +1829,7 @@ def build_email_html(
             </td>
         </tr>
         <tr>
-            <td style="width:50%; vertical-align:top; padding-right:10px;">
+            <td style="vertical-align:top; padding:0 8px 0 8px;">
                 {html_img_from_fig(
                     irr_heatmap,
                     width=1100,
@@ -1838,7 +1838,7 @@ def build_email_html(
                     max_width_px=760,
                 )}
             </td>
-            <td style="width:50%; vertical-align:top; padding-left:10px;">
+            <td style="vertical-align:top; padding:0 8px 0 8px;">
                 {html_img_from_fig(
                     irr_tcrisk_bid_heatmap,
                     width=1100,
