@@ -1205,14 +1205,14 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
         gas_shrink_pct[slot_name] = float(slot_ngl["shrink"])
 
         if lateral_length:
-            oil_eur_per_ft[slot_name] = round(
-                prod_df["gross_oil_production"].sum() / lateral_length,
-                0,
+            oil_eur_per_ft[slot_name] = (
+                prod_df["gross_oil_production"].sum() / lateral_length
             )
-            gas_eur_per_ft[slot_name] = round(
-                prod_df["gross_gas_production"].sum() / lateral_length,
-                0,
+            
+            gas_eur_per_ft[slot_name] = (
+                prod_df["gross_gas_production"].sum() / lateral_length
             )
+            
     add_section("Development")
     add_data("Type Curve", {k: str(v["tc_name"]) for k, v in slot_map.items()})
     add_data("Gross Wells", {k: fmt_num(v["gross_wells"], decimals=2) for k, v in slot_map.items()})
