@@ -2230,10 +2230,6 @@ if apply_slot_changes:
 
 slot_df = st.session_state["slot_df"].copy()
 
-if st.button("Recalculate Unit Acres"):
-    st.session_state["slot_df"] = apply_calc_unit_acres(st.session_state["slot_df"].copy())
-    st.rerun()
-
 run_model_clicked = st.button("Run Model", type="primary")
 
 if run_model_clicked:
