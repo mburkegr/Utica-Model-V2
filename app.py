@@ -1521,9 +1521,9 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
         shared_yaxes=True,
         horizontal_spacing=0.08,
         subplot_titles=[
-            f"Downside (Oil ${pricing_cases[0][1]:.0f}  /  Gas ${pricing_cases[0][2]:.2f})",
-            f"Base (Oil ${pricing_cases[1][1]:.0f}  /  Gas ${pricing_cases[1][2]:.2f})",
-            f"Upside (Oil ${pricing_cases[2][1]:.0f}  /  Gas ${pricing_cases[2][2]:.2f})",
+            f"Downside (${pricing_cases[0][1]:.0f} / ${pricing_cases[0][2]:.2f})",
+            f"Base (${pricing_cases[1][1]:.0f} / ${pricing_cases[1][2]:.2f})",
+            f"Upside (${pricing_cases[2][1]:.0f} / ${pricing_cases[2][2]:.2f})",
         ]
     )
     panel_col_map = {"Downside": 1, "Base": 2, "Upside": 3}
@@ -1780,7 +1780,7 @@ def build_email_html(
         "<h3 style='margin-bottom:8px;'>Charts:</h3>",
         html_img_from_fig(cum_fcf_chart, width=1100, height=520, title="Cumulative FCF"),
         html_img_from_fig(prod_chart_stacked, width=1100, height=520, title="Production in BOE/d"),
-        html_img_from_fig(scenario_scatter_chart, width=1300, height=700, title="Scenario Matrix"),
+        html_img_from_fig(scenario_scatter_chart, width=1500, height=750, title="Scenario Matrix")
     ])
 
     html = f"""
