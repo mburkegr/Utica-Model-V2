@@ -942,16 +942,12 @@ def style_quarterly_output_table(display_df, row_styles):
         })
         .set_properties(subset=year_cols, **{
             "text-align": "right",
-            "background-color": YEAR_FILL,
-            "border-top": f"1px solid {YEAR_FILL}",
-            "border-bottom": f"1px solid {YEAR_FILL}",
-            "border-left": f"1px solid {YEAR_FILL}",
-            "border-right": f"1px solid {YEAR_FILL}",
-            "background-clip": "padding-box",
+            "background-color": "white",
         })
         .set_properties(subset=separator_cols, **{
             "background-color": "white",
-            "width": "14px",
+            "width": "10px",
+            "border-left": f"3px solid {QUARTERLY_HEADER_COLOR}",
         })
         .set_table_styles([
             {
@@ -1012,9 +1008,21 @@ def style_quarterly_output_table(display_df, row_styles):
             {
                 "selector": "thead th",
                 "props": [
+                    ("background-color", QUARTERLY_HEADER_COLOR),
+                    ("color", "white"),
+                    ("font-weight", "700"),
+                    ("font-size", "12px"),
+                    ("padding", "4px 8px"),
                     ("border", "none !important"),
                     ("outline", "none !important"),
                     ("box-shadow", "none !important"),
+                    ("text-align", "right"),
+                ],
+            },
+            {
+                "selector": "thead th.col0",
+                "props": [
+                    ("text-align", "left"),
                 ],
             },
             {
