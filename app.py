@@ -2320,7 +2320,10 @@ with st.form("slot_inputs_form"):
             "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
             "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
             "gross_wells": st.column_config.NumberColumn("Gross Wells", format="%.2f"),
-            "net_acres": st.column_config.NumberColumn("Net Acres", format="%,.1f"),
+            "net_acres": st.column_config.NumberColumn(
+                "Net Acres",
+                format="%.2f",
+            ),
             "unit_acres": st.column_config.NumberColumn("Unit Acres", format="%,.0f"),
             "use_calc_unit_acres": st.column_config.CheckboxColumn("Calc Unit Acres"),
             "pct_unitized": st.column_config.NumberColumn("% Unitized", format="%.2f"),
