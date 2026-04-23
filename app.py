@@ -280,7 +280,7 @@ def build_slot_template(num_slots):
                 "slot_id": i,
                 "tc_name": "Choose TC",
                 "gross_wells": 1.0,
-                "net_acres": 25,
+                "net_acres": 25.0,
                 "unit_acres": 200.0,
                 "use_calc_unit_acres": False,
                 "pct_unitized": 1.0,
