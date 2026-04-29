@@ -1200,37 +1200,37 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs, slot_returns
     def fmt_pct(x, decimals=0):
         return format_accounting_percent(x, decimals=decimals, null_as_blank=False)
 
-    def fmt_date(x):
-    if pd.isnull(x):
-        return "-"
-    return pd.to_datetime(x).strftime("%m/%d/%y")
+       def fmt_date(x):
+            if pd.isnull(x):
+                return "-"
+            return pd.to_datetime(x).strftime("%m/%d/%y")
 
-def fmt_tc_name(x):
-    if pd.isnull(x):
-        return "-"
-
-    text = str(x)
-    parts = text.split("_")
-
-    # Example:
-    # lean_cond_plus_wet_gas
-    # becomes:
-    # lean_cond_plus<br>wet_gas
-    if len(parts) >= 3:
-        first_line = "_".join(parts[:-2])
-        second_line = "_".join(parts[-2:])
-        return f"{first_line}<br>{second_line}"
-
-    return text
-
-def get_slot_return(slot_id, metric):
-    slot_id = int(slot_id)
-    return slot_returns.get(slot_id, {}).get(metric)
-    
-        # Break at the last underscore
-        left, right = text.rsplit("_", 1)
-    
-        return f"{left}_<br>{right}"
+        def fmt_tc_name(x):
+            if pd.isnull(x):
+                return "-"
+        
+            text = str(x)
+            parts = text.split("_")
+        
+            # Example:
+            # lean_cond_plus_wet_gas
+            # becomes:
+            # lean_cond_plus<br>wet_gas
+            if len(parts) >= 3:
+                first_line = "_".join(parts[:-2])
+                second_line = "_".join(parts[-2:])
+                return f"{first_line}<br>{second_line}"
+        
+            return text
+        
+        def get_slot_return(slot_id, metric):
+            slot_id = int(slot_id)
+            return slot_returns.get(slot_id, {}).get(metric)
+            
+                # Break at the last underscore
+                left, right = text.rsplit("_", 1)
+            
+                return f"{left}_<br>{right}"
     
     gas_shrink_pct = {k: None for k in slot_map.keys()}
     oil_eur_per_ft = {k: None for k in slot_map.keys()}
