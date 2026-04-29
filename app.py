@@ -2113,11 +2113,36 @@ if "moic" not in st.session_state:
 if "model_has_run" not in st.session_state:
     st.session_state["model_has_run"] = False
 
+if "heavy_outputs_disabled" not in st.session_state:
+    st.session_state["heavy_outputs_disabled"] = False
 
 # -----------------------------
 # Sidebar deal inputs
 # -----------------------------
 st.sidebar.header("Deal-Level Inputs")
+
+st.sidebar.subheader("Output Mode")
+
+heavy_outputs_label = (
+    "Enable Sensitivities / Charts / Email"
+    if st.session_state["heavy_outputs_disabled"]
+    else "Disable Sensitivities / Charts / Email"
+)
+
+if st.sidebar.button(
+    heavy_outputs_label,
+    use_container_width=True,
+    type="secondary",
+):
+    st.session_state["heavy_outputs_disabled"] = not st.session_state["heavy_outputs_disabled"]
+    st.rerun()
+
+disable_heavy_outputs = st.session_state["heavy_outputs_disabled"]
+
+if disable_heavy_outputs:
+    st.sidebar.info(
+        "Fast output mode is on. Sensitivities, charts, and email export are disabled."
+    )
 
 st.sidebar.subheader("Timing")
 effective_date = st.sidebar.date_input("Effective Date", value=next_month_start())
@@ -2481,172 +2506,173 @@ if (
     with col5:
         st.metric("MOIC", format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A")
 
-    st.subheader("Sensitivity Tables")
-
     base_dc = deal_inputs["dc_override"] if deal_inputs["use_dc_override"] else float(slot_df["dc_costs"].mean())
     base_bid = deal_inputs["bid_override"] if deal_inputs["use_bid_override"] else float(slot_df["bid_per_acre"].mean())
 
-    scenario_scatter_chart = build_scenario_scatter_chart(
-        slot_df=slot_df,
-        deal_inputs=deal_inputs,
-        base_bid=base_bid,
-        base_dc=base_dc,
-    )
+    if not disable_heavy_outputs:
+        st.subheader("Sensitivity Tables")
+
+        scenario_scatter_chart = build_scenario_scatter_chart(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            base_bid=base_bid,
+            base_dc=base_dc,
+        )
+        
+        irr_sens_df, moic_sens_df = run_bid_dc_sensitivity(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            base_dc=base_dc,
+            base_bid=base_bid,
+        )
     
-    irr_sens_df, moic_sens_df = run_bid_dc_sensitivity(
-        slot_df=slot_df,
-        deal_inputs=deal_inputs,
-        base_dc=base_dc,
-        base_bid=base_bid,
-    )
-
-    irr_heatmap = build_heatmap(
-        irr_sens_df,
-        "IRR Sensitivity",
-        metric="irr",
-        x_title="D&C Costs ($/ft)",
-        y_title="$/Acre Bid",
-        base_x=base_dc,
-        base_y=base_bid,
-    )
-
-    moic_heatmap = build_heatmap(
-        moic_sens_df,
-        "MOIC Sensitivity",
-        metric="moic",
-        x_title="D&C Costs ($/ft)",
-        y_title="$/Acre Bid",
-        base_x=base_dc,
-        base_y=base_bid,
-    )
-
-    bid_values = build_sensitivity_range(base_bid, 500.0, 3)
-    tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
-    oil_values = [50, 55, 60, 65, 70]
-    gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
-
-    irr_oil_bid_df, moic_oil_bid_df = run_oil_bid_sensitivity(
-        slot_df=slot_df,
-        deal_inputs=deal_inputs,
-        oil_values=oil_values,
-        bid_values=bid_values,
-    )
-
-    irr_gas_bid_df, moic_gas_bid_df = run_gas_bid_sensitivity(
-        slot_df=slot_df,
-        deal_inputs=deal_inputs,
-        gas_values=gas_values,
-        bid_values=bid_values,
-    )
-
-    irr_oil_bid_heatmap = build_heatmap(
-        irr_oil_bid_df,
-        "IRR Sensitivity",
-        metric="irr",
-        x_title="Oil Price ($/bbl)",
-        y_title="$/Acre Bid",
-        base_x=deal_inputs["oil_price"],
-        base_y=base_bid,
-    )
-
-    moic_oil_bid_heatmap = build_heatmap(
-        moic_oil_bid_df,
-        "MOIC Sensitivity",
-        metric="moic",
-        x_title="Oil Price ($/bbl)",
-        y_title="$/Acre Bid",
-        base_x=deal_inputs["oil_price"],
-        base_y=base_bid,
-    )
-
-    irr_gas_bid_heatmap = build_heatmap(
-        irr_gas_bid_df,
-        "IRR Sensitivity",
-        metric="irr",
-        x_title="Gas Price ($/mcf)",
-        y_title="$/Acre Bid",
-        base_x=deal_inputs["gas_price"],
-        base_y=base_bid,
-    )
-
-    moic_gas_bid_heatmap = build_heatmap(
-        moic_gas_bid_df,
-        "MOIC Sensitivity",
-        metric="moic",
-        x_title="Gas Price ($/mcf)",
-        y_title="$/Acre Bid",
-        base_x=deal_inputs["gas_price"],
-        base_y=base_bid,
-    )
-
-    with st.expander(r"D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### IRR Sensitivity")
-            st.plotly_chart(irr_heatmap, use_container_width=True)
-        with col2:
-            st.markdown("### MOIC Sensitivity")
-            st.plotly_chart(moic_heatmap, use_container_width=True)
+        irr_heatmap = build_heatmap(
+            irr_sens_df,
+            "IRR Sensitivity",
+            metric="irr",
+            x_title="D&C Costs ($/ft)",
+            y_title="$/Acre Bid",
+            base_x=base_dc,
+            base_y=base_bid,
+        )
     
-    with st.expander(r"Oil Price vs. \$/Acre Bid Sensitivity", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### IRR Sensitivity")
-            st.plotly_chart(irr_oil_bid_heatmap, use_container_width=True)
-        with col2:
-            st.markdown("### MOIC Sensitivity")
-            st.plotly_chart(moic_oil_bid_heatmap, use_container_width=True)
-
-    with st.expander("Gas Price vs. $/Acre Bid Sensitivity", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### IRR Sensitivity")
-            st.plotly_chart(irr_gas_bid_heatmap, use_container_width=True)
-        with col2:
-            st.markdown("### MOIC Sensitivity")
-            st.plotly_chart(moic_gas_bid_heatmap, use_container_width=True)
-
-    irr_tcrisk_bid_df, moic_tcrisk_bid_df = run_tcrisk_bid_sensitivity(
-        slot_df=slot_df,
-        deal_inputs=deal_inputs,
-        tc_risk_values=tc_risk_values,
-        bid_values=bid_values,
-    )
-
-    base_tc_risk = float(slot_df["tc_risk"].iloc[0])
-
-    irr_tcrisk_bid_heatmap = build_heatmap(
-        irr_tcrisk_bid_df,
-        "IRR Sensitivity",
-        metric="irr",
-        x_title="TC Risk",
-        y_title="$/Acre Bid",
-        x_format="percent",
-        y_format="dollar",
-        base_x=base_tc_risk,
-        base_y=base_bid,
-    )
-
-    moic_tcrisk_bid_heatmap = build_heatmap(
-        moic_tcrisk_bid_df,
-        "MOIC Sensitivity",
-        metric="moic",
-        x_title="TC Risk",
-        y_title="$/Acre Bid",
-        x_format="percent",
-        y_format="dollar",
-        base_x=base_tc_risk,
-        base_y=base_bid,
-    )
-
-    with st.expander("TC Risk vs. $/Acre Bid Sensitivity", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### IRR Sensitivity")
-            st.plotly_chart(irr_tcrisk_bid_heatmap, use_container_width=True)
-        with col2:
-            st.markdown("### MOIC Sensitivity")
-            st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
+        moic_heatmap = build_heatmap(
+            moic_sens_df,
+            "MOIC Sensitivity",
+            metric="moic",
+            x_title="D&C Costs ($/ft)",
+            y_title="$/Acre Bid",
+            base_x=base_dc,
+            base_y=base_bid,
+        )
+    
+        bid_values = build_sensitivity_range(base_bid, 500.0, 3)
+        tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
+        oil_values = [50, 55, 60, 65, 70]
+        gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
+    
+        irr_oil_bid_df, moic_oil_bid_df = run_oil_bid_sensitivity(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            oil_values=oil_values,
+            bid_values=bid_values,
+        )
+    
+        irr_gas_bid_df, moic_gas_bid_df = run_gas_bid_sensitivity(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            gas_values=gas_values,
+            bid_values=bid_values,
+        )
+    
+        irr_oil_bid_heatmap = build_heatmap(
+            irr_oil_bid_df,
+            "IRR Sensitivity",
+            metric="irr",
+            x_title="Oil Price ($/bbl)",
+            y_title="$/Acre Bid",
+            base_x=deal_inputs["oil_price"],
+            base_y=base_bid,
+        )
+    
+        moic_oil_bid_heatmap = build_heatmap(
+            moic_oil_bid_df,
+            "MOIC Sensitivity",
+            metric="moic",
+            x_title="Oil Price ($/bbl)",
+            y_title="$/Acre Bid",
+            base_x=deal_inputs["oil_price"],
+            base_y=base_bid,
+        )
+    
+        irr_gas_bid_heatmap = build_heatmap(
+            irr_gas_bid_df,
+            "IRR Sensitivity",
+            metric="irr",
+            x_title="Gas Price ($/mcf)",
+            y_title="$/Acre Bid",
+            base_x=deal_inputs["gas_price"],
+            base_y=base_bid,
+        )
+    
+        moic_gas_bid_heatmap = build_heatmap(
+            moic_gas_bid_df,
+            "MOIC Sensitivity",
+            metric="moic",
+            x_title="Gas Price ($/mcf)",
+            y_title="$/Acre Bid",
+            base_x=deal_inputs["gas_price"],
+            base_y=base_bid,
+        )
+    
+        with st.expander(r"D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### IRR Sensitivity")
+                st.plotly_chart(irr_heatmap, use_container_width=True)
+            with col2:
+                st.markdown("### MOIC Sensitivity")
+                st.plotly_chart(moic_heatmap, use_container_width=True)
+        
+        with st.expander(r"Oil Price vs. \$/Acre Bid Sensitivity", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### IRR Sensitivity")
+                st.plotly_chart(irr_oil_bid_heatmap, use_container_width=True)
+            with col2:
+                st.markdown("### MOIC Sensitivity")
+                st.plotly_chart(moic_oil_bid_heatmap, use_container_width=True)
+    
+        with st.expander("Gas Price vs. $/Acre Bid Sensitivity", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### IRR Sensitivity")
+                st.plotly_chart(irr_gas_bid_heatmap, use_container_width=True)
+            with col2:
+                st.markdown("### MOIC Sensitivity")
+                st.plotly_chart(moic_gas_bid_heatmap, use_container_width=True)
+    
+        irr_tcrisk_bid_df, moic_tcrisk_bid_df = run_tcrisk_bid_sensitivity(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            tc_risk_values=tc_risk_values,
+            bid_values=bid_values,
+        )
+    
+        base_tc_risk = float(slot_df["tc_risk"].iloc[0])
+    
+        irr_tcrisk_bid_heatmap = build_heatmap(
+            irr_tcrisk_bid_df,
+            "IRR Sensitivity",
+            metric="irr",
+            x_title="TC Risk",
+            y_title="$/Acre Bid",
+            x_format="percent",
+            y_format="dollar",
+            base_x=base_tc_risk,
+            base_y=base_bid,
+        )
+    
+        moic_tcrisk_bid_heatmap = build_heatmap(
+            moic_tcrisk_bid_df,
+            "MOIC Sensitivity",
+            metric="moic",
+            x_title="TC Risk",
+            y_title="$/Acre Bid",
+            x_format="percent",
+            y_format="dollar",
+            base_x=base_tc_risk,
+            base_y=base_bid,
+        )
+    
+        with st.expander("TC Risk vs. $/Acre Bid Sensitivity", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### IRR Sensitivity")
+                st.plotly_chart(irr_tcrisk_bid_heatmap, use_container_width=True)
+            with col2:
+                st.markdown("### MOIC Sensitivity")
+                st.plotly_chart(moic_tcrisk_bid_heatmap, use_container_width=True)
 
     st.subheader("Outputs")
     
@@ -2702,72 +2728,80 @@ if (
                 format_accounting_number(blended_bid, decimals=0, prefix="$"),
             )
 
-    cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
+    if not disable_heavy_outputs:
+        
+        cum_fcf_chart = build_cumulative_fcf_chart(deal_df, slot_df)
 
-    with st.expander("Charts", expanded=False):
-        chart_tab1, chart_tab2, chart_tab3 = st.tabs(
-            ["Cumulative FCF", "Production", "Scenario Matrix"]
+        with st.expander("Charts", expanded=False):
+            chart_tab1, chart_tab2, chart_tab3 = st.tabs(
+                ["Cumulative FCF", "Production", "Scenario Matrix"]
+            )
+        
+            with chart_tab1:
+                st.plotly_chart(cum_fcf_chart, use_container_width=True)
+        
+            with chart_tab2:
+                prod_chart_view = st.radio(
+                    "Production Chart View",
+                    ["Stacked Mcfe/d", "Stream Split"],
+                    horizontal=True,
+                    key="prod_chart_view",
+                )
+                prod_chart = build_production_profile_chart(
+                    deal_df,
+                    chart_view=prod_chart_view,
+                )
+                st.plotly_chart(prod_chart, use_container_width=True)
+        
+            with chart_tab3:
+                st.plotly_chart(scenario_scatter_chart, use_container_width=True)
+        
+        st.subheader("Email Draft Export")
+        
+        opportunity_name = st.text_input(
+            "Opportunity Name for Email Draft",
+            value="Fill Name Here",
+            key="email_opportunity_name",
         )
-    
-        with chart_tab1:
-            st.plotly_chart(cum_fcf_chart, use_container_width=True)
-    
-        with chart_tab2:
-            prod_chart_view = st.radio(
-                "Production Chart View",
-                ["Stacked Mcfe/d", "Stream Split"],
-                horizontal=True,
-                key="prod_chart_view",
-            )
-            prod_chart = build_production_profile_chart(
-                deal_df,
-                chart_view=prod_chart_view,
-            )
-            st.plotly_chart(prod_chart, use_container_width=True)
-    
-        with chart_tab3:
-            st.plotly_chart(scenario_scatter_chart, use_container_width=True)
-    
-    st.subheader("Email Draft Export")
-    
-    opportunity_name = st.text_input(
-        "Opportunity Name for Email Draft",
-        value="Fill Name Here",
-        key="email_opportunity_name",
-    )
-    
-    prod_chart_stacked = build_production_profile_chart(
-        deal_df,
-        chart_view="Stacked Mcfe/d",
-    )
-    
-    email_html = build_email_html(
-        opportunity_name=opportunity_name,
-        deal_inputs=deal_inputs,
-        slot_df=slot_df,
-        irr=irr,
-        moic=moic,
-        tc_output_styler=tc_output_styler,
-        quarterly_output_styler=quarterly_output_styler,
-        irr_oil_bid_heatmap=irr_oil_bid_heatmap,
-        irr_gas_bid_heatmap=irr_gas_bid_heatmap,
-        irr_heatmap=irr_heatmap,
-        irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
-        cum_fcf_chart=cum_fcf_chart,
-        prod_chart_stacked=prod_chart_stacked,
-        scenario_scatter_chart=scenario_scatter_chart,
-    )
-    
-    with st.expander("Preview Email Draft", expanded=False):
-        st.components.v1.html(email_html, height=900, scrolling=True)
-    
-    st.download_button(
-        label="Download Email Draft (HTML)",
-        data=email_html,
-        file_name="utica_email_draft.html",
-        mime="text/html",
-        key="download_email_html",
-    )
+        
+        prod_chart_stacked = build_production_profile_chart(
+            deal_df,
+            chart_view="Stacked Mcfe/d",
+        )
+        
+        email_html = build_email_html(
+            opportunity_name=opportunity_name,
+            deal_inputs=deal_inputs,
+            slot_df=slot_df,
+            irr=irr,
+            moic=moic,
+            tc_output_styler=tc_output_styler,
+            quarterly_output_styler=quarterly_output_styler,
+            irr_oil_bid_heatmap=irr_oil_bid_heatmap,
+            irr_gas_bid_heatmap=irr_gas_bid_heatmap,
+            irr_heatmap=irr_heatmap,
+            irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
+            cum_fcf_chart=cum_fcf_chart,
+            prod_chart_stacked=prod_chart_stacked,
+            scenario_scatter_chart=scenario_scatter_chart,
+        )
+        
+        with st.expander("Preview Email Draft", expanded=False):
+            st.components.v1.html(email_html, height=900, scrolling=True)
+        
+        st.download_button(
+            label="Download Email Draft (HTML)",
+            data=email_html,
+            file_name="utica_email_draft.html",
+            mime="text/html",
+            key="download_email_html",
+        )
+
+    else:
+        st.info(
+            "Sensitivities, charts, production graphs, and email export are disabled. "
+            "TC Assumptions Output and Quarterly Output are still available above."
+        )
 
 else:
     st.info("Set your deal assumptions and slot inputs, then click Run Model.")
