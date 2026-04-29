@@ -1153,7 +1153,7 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     def fmt_date(x):
         if pd.isnull(x):
             return "-"
-        return pd.to_datetime(x).strftime("%Y-%m-%d")
+        return pd.to_datetime(x).strftime("%m/%d/%y")
 
     gas_shrink_pct = {k: None for k in slot_map.keys()}
     oil_eur_per_ft = {k: None for k in slot_map.keys()}
@@ -1272,57 +1272,100 @@ def style_tc_assumptions_output_table(display_df, row_styles):
         return styles
 
     return (
-        display_df.style
-        .apply(row_style, axis=1)
-        .hide(axis="index")
-        .set_properties(subset=[first_col], **{
-            "text-align": "left",
-            "white-space": "pre",
-            "background-color": "white",
-        })
-        .set_properties(subset=other_cols, **{
-            "text-align": "right",
-            "background-color": "white",
-        })
-        .set_table_styles([
-            {
-                "selector": "table",
-                "props": [
-                    ("border-collapse", "separate"),
-                    ("border-spacing", "0"),
-                    ("width", "100%"),
-                ],
-            },
-            {
-                "selector": "thead th",
-                "props": [
-                    ("background-color", QUARTERLY_HEADER_COLOR),
-                    ("color", "white"),
-                    ("font-weight", "700"),
-                    ("text-align", "center"),
-                    ("border", "none"),
-                    ("padding", "4px 8px"),
-                    ("font-size", "12px"),
-                ],
-            },
-            {
-                "selector": "tbody td",
-                "props": [
-                    ("border", "none"),
-                    ("padding", "4px 8px"),
-                    ("font-size", "12px"),
-                ],
-            },
-            {
-                "selector": "tbody td.col0",
-                "props": [
-                    ("text-align", "left"),
-                    ("white-space", "pre"),
-                ],
-            },
-        ], overwrite=False)
-    )
-
+    display_df.style
+    .apply(row_style, axis=1)
+    .hide(axis="index")
+    .set_properties(subset=[first_col], **{
+        "text-align": "left",
+        "white-space": "pre-wrap",
+        "background-color": "white",
+        "width": "180px",
+        "min-width": "180px",
+        "max-width": "180px",
+    })
+    .set_properties(subset=other_cols, **{
+        "text-align": "right",
+        "background-color": "white",
+        "white-space": "normal",
+        "overflow-wrap": "anywhere",
+        "word-break": "break-word",
+        "vertical-align": "top",
+    })
+    .set_table_styles([
+        {
+            "selector": "table",
+            "props": [
+                ("border-collapse", "separate"),
+                ("border-spacing", "0"),
+                ("width", "100%"),
+                ("table-layout", "fixed"),
+            ],
+        },
+        {
+            "selector": "thead th",
+            "props": [
+                ("background-color", QUARTERLY_HEADER_COLOR),
+                ("color", "white"),
+                ("font-weight", "700"),
+                ("text-align", "center"),
+                ("border", "none"),
+                ("padding", "4px 8px"),
+                ("font-size", "12px"),
+                ("white-space", "normal"),
+                ("overflow-wrap", "anywhere"),
+                ("word-break", "break-word"),
+            ],
+        },
+        {
+            "selector": "thead th.col0",
+            "props": [
+                ("text-align", "left"),
+                ("width", "180px"),
+                ("min-width", "180px"),
+                ("max-width", "180px"),
+            ],
+        },
+        {
+            "selector": "thead th:not(.col0)",
+            "props": [
+                ("width", "120px"),
+                ("min-width", "120px"),
+                ("max-width", "120px"),
+            ],
+        },
+        {
+            "selector": "tbody td",
+            "props": [
+                ("border", "none"),
+                ("padding", "4px 8px"),
+                ("font-size", "12px"),
+                ("vertical-align", "top"),
+            ],
+        },
+        {
+            "selector": "tbody td.col0",
+            "props": [
+                ("text-align", "left"),
+                ("white-space", "pre-wrap"),
+                ("width", "180px"),
+                ("min-width", "180px"),
+                ("max-width", "180px"),
+            ],
+        },
+        {
+            "selector": "tbody td:not(.col0)",
+            "props": [
+                ("text-align", "right"),
+                ("white-space", "normal"),
+                ("overflow-wrap", "anywhere"),
+                ("word-break", "break-word"),
+                ("width", "120px"),
+                ("min-width", "120px"),
+                ("max-width", "120px"),
+            ],
+        },
+    ], overwrite=False)
+)
 
 def render_deal_highlight_box(title, value):
     st.markdown(
