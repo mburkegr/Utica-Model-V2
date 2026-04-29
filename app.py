@@ -2532,7 +2532,13 @@ with st.form("slot_inputs_form"):
             "net_revenue_interest": st.column_config.NumberColumn("NRI", format="%.2f"),
             "lateral_length": st.column_config.NumberColumn("Lateral Length (ft)", format="%,d"),
             "dc_costs": st.column_config.NumberColumn("D&C ($/ft)", format="$%,.0f"),
-            "tc_risk": st.column_config.NumberColumn("TC Risk", format="%.2f"),
+            "tc_risk": st.column_config.NumberColumn(
+                "TC Risk",
+                min_value=0.0,
+                step=0.01,
+                format="%.2f",
+                help="Enter as decimal, e.g. 0.97 = 97% TC risk.",
+            ),
             "bid_per_acre": st.column_config.NumberColumn("$/Acre Bid", format="$%,d"),
             "oil_diff": st.column_config.NumberColumn("Oil Diff", format="$%.2f"),
             "gas_diff": st.column_config.NumberColumn("Gas Diff", format="$%.2f"),
@@ -2551,7 +2557,14 @@ with st.form("slot_inputs_form"):
     )
 
 if apply_slot_changes:
-    st.session_state["slot_df"] = apply_calc_unit_acres(edited_slot_df.copy())
+    cleaned_slot_df = edited_slot_df.copy()
+
+    cleaned_slot_df["tc_risk"] = pd.to_numeric(
+        cleaned_slot_df["tc_risk"],
+        errors="coerce",
+    ).fillna(1.0).astype(float)
+
+    st.session_state["slot_df"] = apply_calc_unit_acres(cleaned_slot_df)
     st.session_state["model_has_run"] = False
 
 slot_df = st.session_state["slot_df"].copy()
