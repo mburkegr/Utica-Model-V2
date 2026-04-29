@@ -277,6 +277,7 @@ def build_slot_template(num_slots):
     for i in range(1, num_slots + 1):
         rows.append(
             {
+                "include_slot": True,
                 "slot_id": i,
                 "tc_name": "Choose TC",
                 "gross_wells": 1.0,
@@ -2141,11 +2142,17 @@ def build_email_html(
 if "slot_df" not in st.session_state:
     st.session_state["slot_df"] = build_slot_template(2)
 
+if "include_slot" not in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"].insert(0, "include_slot", True)
+
 if "deal_df" not in st.session_state:
     st.session_state["deal_df"] = None
 
 if "all_slots_df" not in st.session_state:
     st.session_state["all_slots_df"] = None
+
+if "model_slot_df" not in st.session_state:
+    st.session_state["model_slot_df"] = None
 
 if "irr" not in st.session_state:
     st.session_state["irr"] = None
@@ -2380,13 +2387,42 @@ if load_slots_clicked:
 # Slot editor only updates when user clicks Apply Slot Changes
 with st.form("slot_inputs_form"):
     edited_slot_df = st.data_editor(
-        st.session_state["slot_df"],
-        num_rows="fixed",
-        use_container_width=True,
-        key="slot_editor",
-        column_config={
-            "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
-            "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
+    st.session_state["slot_df"],
+    num_rows="fixed",
+    use_container_width=True,
+    key="slot_editor",
+    column_order=[
+        "include_slot",
+        "slot_id",
+        "tc_name",
+        "gross_wells",
+        "net_acres",
+        "unit_acres",
+        "use_calc_unit_acres",
+        "pct_unitized",
+        "drilling_spud_month",
+        "flowback_delay",
+        "net_revenue_interest",
+        "lateral_length",
+        "dc_costs",
+        "tc_risk",
+        "bid_per_acre",
+        "oil_diff",
+        "gas_diff",
+        "oil_opex_bbl",
+        "gas_opex_mcf",
+        "ngl_opex",
+        "fixed_loe",
+        "ngl_yield",
+    ],
+    column_config={
+        "include_slot": st.column_config.CheckboxColumn(
+            "Include",
+            help="Include this slot in the model run.",
+            default=True,
+        ),
+        "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
+        "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
             "gross_wells": st.column_config.NumberColumn("Gross Wells", format="%.2f"),
             "net_acres": st.column_config.NumberColumn(
                 "Net Acres",
@@ -2429,15 +2465,25 @@ run_model_clicked = st.button("Run Model", type="primary")
 if run_model_clicked:
     st.session_state["slot_df"] = slot_df
 
-    if (slot_df["tc_name"] == "Choose TC").any():
-        st.warning("Please select a Type Curve for all slots before running the model.")
+    included_slot_df = slot_df[slot_df["include_slot"].fillna(True)].copy()
+
+    if included_slot_df.empty:
+        st.warning("Please include at least one slot before running the model.")
         st.session_state["model_has_run"] = False
+
+    elif (included_slot_df["tc_name"] == "Choose TC").any():
+        st.warning("Please select a Type Curve for all included slots before running the model.")
+        st.session_state["model_has_run"] = False
+
     else:
+        model_slot_df = included_slot_df.drop(columns=["include_slot"], errors="ignore").copy()
+
         all_slots_df, deal_df, slot_audit_df, deal_audit_df, irr, moic = run_deal_model(
-            slot_df,
+            model_slot_df,
             deal_inputs,
         )
 
+        st.session_state["model_slot_df"] = model_slot_df
         st.session_state["all_slots_df"] = all_slots_df
         st.session_state["deal_df"] = deal_df
         st.session_state["slot_audit_df"] = slot_audit_df
@@ -2501,6 +2547,7 @@ if (
     moic = st.session_state["moic"]
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
+    slot_df = st.session_state["model_slot_df"].copy()
 
     deal_display_df = deal_audit_df[[col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]].copy()
     slot_display_df = slot_audit_df[[col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]].copy()
