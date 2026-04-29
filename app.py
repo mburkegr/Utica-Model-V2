@@ -1162,8 +1162,18 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     
         text = str(x)
     
-        if "_" not in text:
-            return text
+        parts = text.split("_")
+    
+        # Example:
+        # lean_cond_plus_wet_gas
+        # becomes:
+        # lean_cond_plus<br>wet_gas
+        if len(parts) >= 3:
+            first_line = "_".join(parts[:-2])
+            second_line = "_".join(parts[-2:])
+            return f"{first_line}<br>{second_line}"
+    
+        return text
     
         # Break at the last underscore
         left, right = text.rsplit("_", 1)
