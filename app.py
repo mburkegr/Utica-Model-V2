@@ -1200,7 +1200,7 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs, slot_returns
     def fmt_pct(x, decimals=0):
         return format_accounting_percent(x, decimals=decimals, null_as_blank=False)
 
-       def fmt_date(x):
+    def fmt_date(x):
         if pd.isnull(x):
             return "-"
         return pd.to_datetime(x).strftime("%m/%d/%y")
