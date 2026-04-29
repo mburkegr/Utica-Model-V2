@@ -2163,6 +2163,13 @@ if "moic" not in st.session_state:
 if "model_has_run" not in st.session_state:
     st.session_state["model_has_run"] = False
 
+# If the app has old results from before model_slot_df existed,
+# force the user to rerun the model instead of trying to copy None.
+if st.session_state["model_has_run"] and st.session_state["model_slot_df"] is None:
+    st.session_state["model_has_run"] = False
+    st.session_state["deal_df"] = None
+    st.session_state["all_slots_df"] = None
+
 if "heavy_outputs_disabled" not in st.session_state:
     st.session_state["heavy_outputs_disabled"] = False
 
@@ -2540,6 +2547,7 @@ if (
     st.session_state["model_has_run"]
     and st.session_state["deal_df"] is not None
     and st.session_state["all_slots_df"] is not None
+    and st.session_state["model_slot_df"] is not None
 ):
     all_slots_df = st.session_state["all_slots_df"]
     deal_df = st.session_state["deal_df"]
