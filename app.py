@@ -1156,6 +1156,20 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
             return "-"
         return pd.to_datetime(x).strftime("%m/%d/%y")
 
+    def fmt_tc_name(x):
+        if pd.isnull(x):
+            return "-"
+    
+        text = str(x)
+    
+        if "_" not in text:
+            return text
+    
+        # Break at the last underscore
+        left, right = text.rsplit("_", 1)
+    
+        return f"{left}_<br>{right}"
+    
     gas_shrink_pct = {k: None for k in slot_map.keys()}
     oil_eur_per_ft = {k: None for k in slot_map.keys()}
     gas_eur_per_ft = {k: None for k in slot_map.keys()}
@@ -1215,7 +1229,7 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
             )
             
     add_section("Development")
-    add_data("Type Curve", {k: str(v["tc_name"]) for k, v in slot_map.items()})
+    add_data("Type Curve", {k: fmt_tc_name(v["tc_name"]) for k, v in slot_map.items()})
     add_data("Gross Wells", {k: fmt_num(v["gross_wells"], decimals=2) for k, v in slot_map.items()})
     add_data("Net Acres", {k: fmt_num(v["net_acres"], decimals=1) for k, v in slot_map.items()})
     add_data("Unit Acres", {k: fmt_num(v["unit_acres"], decimals=0) for k, v in slot_map.items()})
