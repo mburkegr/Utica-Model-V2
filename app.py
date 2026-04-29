@@ -347,6 +347,52 @@ def apply_calc_unit_acres(df):
 def build_sensitivity_range(base_value, step, steps_each_way=3):
     return [base_value + step * i for i in range(-steps_each_way, steps_each_way + 1)]
 
+@st.cache_data(show_spinner=False)
+def run_individual_slot_returns(slot_df, deal_inputs):
+    slot_returns = {}
+
+    total_net_acres = float(slot_df["net_acres"].sum())
+
+    for _, slot_row in slot_df.iterrows():
+        slot_id = int(slot_row["slot_id"])
+
+        one_slot_df = pd.DataFrame([slot_row]).copy()
+        one_slot_df = one_slot_df.drop(columns=["include_slot"], errors="ignore")
+
+        slot_deal_inputs = deal_inputs.copy()
+
+        # If using a deal-level acquisition override, allocate it across slots
+        # based on each slot's share of total net acres.
+        if slot_deal_inputs.get("use_acquisition_override", False):
+            total_override = float(slot_deal_inputs.get("acquisition_cost_override", 0.0))
+            slot_net_acres = float(slot_row.get("net_acres", 0.0))
+
+            allocated_override = (
+                total_override * slot_net_acres / total_net_acres
+                if total_net_acres > 0
+                else 0.0
+            )
+
+            slot_deal_inputs["acquisition_cost_override"] = allocated_override
+
+        try:
+            _, _, _, _, slot_irr, slot_moic = run_deal_model(
+                one_slot_df,
+                slot_deal_inputs,
+            )
+
+            slot_returns[slot_id] = {
+                "irr": slot_irr,
+                "moic": slot_moic,
+            }
+
+        except Exception:
+            slot_returns[slot_id] = {
+                "irr": None,
+                "moic": None,
+            }
+
+    return slot_returns
 
 @st.cache_data(show_spinner=False)
 def run_bid_dc_sensitivity(slot_df, deal_inputs, base_dc, base_bid):
@@ -1102,8 +1148,11 @@ def calc_slot_eur_metrics(slot_row, deal_inputs):
 
     return oil_eur_per_ft, gas_eur_per_ft, gas_shrink
 
-def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
+def build_tc_assumptions_output_display_table(slot_df, deal_inputs, slot_returns=None):
     df = slot_df.copy()
+
+    if slot_returns is None:
+        slot_returns = {}
 
     if df.empty:
         return pd.DataFrame({"TC Assumptions": []}), []
@@ -1152,28 +1201,31 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
         return format_accounting_percent(x, decimals=decimals, null_as_blank=False)
 
     def fmt_date(x):
-        if pd.isnull(x):
-            return "-"
-        return pd.to_datetime(x).strftime("%m/%d/%y")
+    if pd.isnull(x):
+        return "-"
+    return pd.to_datetime(x).strftime("%m/%d/%y")
 
-    def fmt_tc_name(x):
-        if pd.isnull(x):
-            return "-"
-    
-        text = str(x)
-    
-        parts = text.split("_")
-    
-        # Example:
-        # lean_cond_plus_wet_gas
-        # becomes:
-        # lean_cond_plus<br>wet_gas
-        if len(parts) >= 3:
-            first_line = "_".join(parts[:-2])
-            second_line = "_".join(parts[-2:])
-            return f"{first_line}<br>{second_line}"
-    
-        return text
+def fmt_tc_name(x):
+    if pd.isnull(x):
+        return "-"
+
+    text = str(x)
+    parts = text.split("_")
+
+    # Example:
+    # lean_cond_plus_wet_gas
+    # becomes:
+    # lean_cond_plus<br>wet_gas
+    if len(parts) >= 3:
+        first_line = "_".join(parts[:-2])
+        second_line = "_".join(parts[-2:])
+        return f"{first_line}<br>{second_line}"
+
+    return text
+
+def get_slot_return(slot_id, metric):
+    slot_id = int(slot_id)
+    return slot_returns.get(slot_id, {}).get(metric)
     
         # Break at the last underscore
         left, right = text.rsplit("_", 1)
@@ -1257,9 +1309,27 @@ def build_tc_assumptions_output_display_table(slot_df, deal_inputs):
     add_data("Oil EUR (Bbl/ft)", {k: fmt_num(oil_eur_per_ft[k], decimals=0) for k in slot_map.keys()})
     add_data("Gas EUR (Mcf/ft)", {k: fmt_num(gas_eur_per_ft[k], decimals=0) for k in slot_map.keys()})
     add_data("NGL Yield", {k: fmt_num(v["ngl_yield"], decimals=2) for k, v in slot_map.items()})
-
+    
     add_gap()
-
+    
+    add_section("Returns")
+    add_data(
+        "IRR",
+        {
+            k: fmt_pct(get_slot_return(v["slot_id"], "irr"), decimals=1)
+            for k, v in slot_map.items()
+        },
+    )
+    add_data(
+        "MOIC",
+        {
+            k: fmt_num(get_slot_return(v["slot_id"], "moic"), decimals=2, suffix="x")
+            for k, v in slot_map.items()
+        },
+    )
+    
+    add_gap()
+    
     add_section("Economics")
     add_data("D&C ($/ft)", {k: fmt_num(v["dc_costs"], decimals=0, prefix="$") for k, v in slot_map.items()})
     add_data("$/Acre Bid", {k: fmt_num(v["bid_per_acre"], decimals=0, prefix="$") for k, v in slot_map.items()})
@@ -2798,9 +2868,15 @@ if (
 
     st.subheader("Outputs")
     
+    slot_returns = run_individual_slot_returns(
+        slot_df=slot_df,
+        deal_inputs=deal_inputs,
+    )
+    
     tc_output_display_df, tc_output_row_styles = build_tc_assumptions_output_display_table(
         slot_df=slot_df,
         deal_inputs=deal_inputs,
+        slot_returns=slot_returns,
     )
     tc_output_styler = style_tc_assumptions_output_table(
         tc_output_display_df,
