@@ -490,7 +490,30 @@ def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values)
                 moic_table.loc[bid, tc_risk] = None
 
     return irr_table, moic_table
+    
+@st.cache_data(show_spinner=False)
+def run_ngl_yield_bid_sensitivity(slot_df, deal_inputs, ngl_yield_values, bid_values):
+    irr_table = pd.DataFrame(index=bid_values, columns=ngl_yield_values, dtype=float)
+    moic_table = pd.DataFrame(index=bid_values, columns=ngl_yield_values, dtype=float)
 
+    for ngl_yield in ngl_yield_values:
+        for bid in bid_values:
+            sens_deal_inputs = deal_inputs.copy()
+            sens_deal_inputs["use_bid_override"] = True
+            sens_deal_inputs["bid_override"] = float(bid)
+
+            sens_slot_df = slot_df.copy()
+            sens_slot_df["ngl_yield"] = float(ngl_yield)
+
+            try:
+                _, _, _, _, irr, moic = run_deal_model(sens_slot_df, sens_deal_inputs)
+                irr_table.loc[bid, ngl_yield] = irr
+                moic_table.loc[bid, ngl_yield] = moic
+            except Exception:
+                irr_table.loc[bid, ngl_yield] = None
+                moic_table.loc[bid, ngl_yield] = None
+
+    return irr_table, moic_table
 
 def build_heatmap(
     df,
@@ -2083,6 +2106,7 @@ def build_email_html(
     irr_gas_bid_heatmap,
     irr_heatmap,
     irr_tcrisk_bid_heatmap,
+    irr_ngl_yield_bid_heatmap,
     cum_fcf_chart,
     prod_chart_stacked,
     scenario_scatter_chart,
@@ -2138,7 +2162,7 @@ def build_email_html(
             </td>
         </tr>
         <tr>
-            <td style="vertical-align:top; padding:0 8px 0 8px;">
+            <td style="vertical-align:top; padding:0 8px 12px 8px;">
                 {html_img_from_fig(
                     irr_heatmap,
                     width=1100,
@@ -2147,7 +2171,7 @@ def build_email_html(
                     max_width_px=760,
                 )}
             </td>
-            <td style="vertical-align:top; padding:0 8px 0 8px;">
+            <td style="vertical-align:top; padding:0 8px 12px 8px;">
                 {html_img_from_fig(
                     irr_tcrisk_bid_heatmap,
                     width=1100,
@@ -2155,6 +2179,19 @@ def build_email_html(
                     title="TC Risk IRR",
                     max_width_px=760,
                 )}
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align:top; padding:0 8px 0 8px;">
+                {html_img_from_fig(
+                    irr_ngl_yield_bid_heatmap,
+                    width=1100,
+                    height=450,
+                    title="NGL Yield IRR",
+                    max_width_px=760,
+                )}
+            </td>
+            <td style="vertical-align:top; padding:0 8px 0 8px;">
             </td>
         </tr>
     </table>
@@ -2750,6 +2787,14 @@ if (
         tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
         oil_values = [50, 55, 60, 65, 70]
         gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
+        
+        base_ngl_yield = float(slot_df["ngl_yield"].mean())
+        ngl_yield_values = sorted(
+            {
+                round(max(0.0, base_ngl_yield + 0.50 * i), 2)
+                for i in range(-3, 4)
+            }
+        )
     
         irr_oil_bid_df, moic_oil_bid_df = run_oil_bid_sensitivity(
             slot_df=slot_df,
@@ -2804,7 +2849,38 @@ if (
             base_x=deal_inputs["gas_price"],
             base_y=base_bid,
         )
-    
+
+        irr_ngl_yield_bid_df, moic_ngl_yield_bid_df = run_ngl_yield_bid_sensitivity(
+            slot_df=slot_df,
+            deal_inputs=deal_inputs,
+            ngl_yield_values=ngl_yield_values,
+            bid_values=bid_values,
+        )
+        
+        irr_ngl_yield_bid_heatmap = build_heatmap(
+            irr_ngl_yield_bid_df,
+            "IRR Sensitivity",
+            metric="irr",
+            x_title="NGL Yield (GPM)",
+            y_title="$/Acre Bid",
+            x_format="float2",
+            y_format="dollar",
+            base_x=base_ngl_yield,
+            base_y=base_bid,
+        )
+        
+        moic_ngl_yield_bid_heatmap = build_heatmap(
+            moic_ngl_yield_bid_df,
+            "MOIC Sensitivity",
+            metric="moic",
+            x_title="NGL Yield (GPM)",
+            y_title="$/Acre Bid",
+            x_format="float2",
+            y_format="dollar",
+            base_x=base_ngl_yield,
+            base_y=base_bid,
+        )
+        
         with st.expander(r"D&C Costs (\$/ft) vs. \$/Acre Bid Sensitivity", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -2822,7 +2898,16 @@ if (
             with col2:
                 st.markdown("### MOIC Sensitivity")
                 st.plotly_chart(moic_oil_bid_heatmap, use_container_width=True)
-    
+
+        with st.expander("NGL Yield (GPM) vs. $/Acre Bid Sensitivity", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### IRR Sensitivity")
+                st.plotly_chart(irr_ngl_yield_bid_heatmap, use_container_width=True)
+            with col2:
+                st.markdown("### MOIC Sensitivity")
+                st.plotly_chart(moic_ngl_yield_bid_heatmap, use_container_width=True)
+        
         with st.expander("Gas Price vs. $/Acre Bid Sensitivity", expanded=False):
             col1, col2 = st.columns(2)
             with col1:
@@ -2987,6 +3072,7 @@ if (
             irr_gas_bid_heatmap=irr_gas_bid_heatmap,
             irr_heatmap=irr_heatmap,
             irr_tcrisk_bid_heatmap=irr_tcrisk_bid_heatmap,
+            irr_ngl_yield_bid_heatmap=irr_ngl_yield_bid_heatmap,
             cum_fcf_chart=cum_fcf_chart,
             prod_chart_stacked=prod_chart_stacked,
             scenario_scatter_chart=scenario_scatter_chart,
