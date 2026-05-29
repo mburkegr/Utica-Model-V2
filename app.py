@@ -2822,12 +2822,11 @@ if (
         gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
         
         base_ngl_yield = weighted_avg_by_net_acres(slot_df, "ngl_yield")
-        ngl_yield_values = sorted(
-            {
-                round(max(0.0, base_ngl_yield + 0.50 * i), 2)
-                for i in range(-3, 4)
-            }
-        )
+        
+        ngl_yield_values = [
+            max(0.0, base_ngl_yield + 0.50 * i)
+            for i in range(-3, 4)
+        ]
     
         irr_oil_bid_df, moic_oil_bid_df = run_oil_bid_sensitivity(
             slot_df=slot_df,
