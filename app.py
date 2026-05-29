@@ -484,6 +484,10 @@ def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values)
     irr_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=tc_risk_values, dtype=float)
 
+    # This is the displayed/base weighted-average TC risk.
+    # At this exact value, delta = 0, so each slot keeps its actual original TC risk.
+    base_tc_risk = weighted_avg_by_net_acres(slot_df, "tc_risk")
+
     for tc_risk in tc_risk_values:
         for bid in bid_values:
             sens_deal_inputs = deal_inputs.copy()
@@ -491,7 +495,15 @@ def run_tcrisk_bid_sensitivity(slot_df, deal_inputs, tc_risk_values, bid_values)
             sens_deal_inputs["bid_override"] = float(bid)
 
             sens_slot_df = slot_df.copy()
-            sens_slot_df["tc_risk"] = float(tc_risk)
+
+            # Apply sensitivity as +/- change from the base weighted average,
+            # instead of setting every slot to the same absolute TC risk.
+            tc_risk_delta = float(tc_risk) - float(base_tc_risk)
+
+            sens_slot_df["tc_risk"] = (
+                pd.to_numeric(sens_slot_df["tc_risk"], errors="coerce").fillna(0.0)
+                + tc_risk_delta
+            ).clip(lower=0.0)
 
             try:
                 _, _, _, _, irr, moic = run_deal_model(sens_slot_df, sens_deal_inputs)
@@ -2817,7 +2829,12 @@ if (
         )
     
         bid_values = build_sensitivity_range(base_bid, 500.0, 3)
-        tc_risk_values = [0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30]
+        base_tc_risk = weighted_avg_by_net_acres(slot_df, "tc_risk")
+
+        tc_risk_values = [
+            max(0.0, base_tc_risk + 0.05 * i)
+            for i in range(-3, 4)
+        ]
         oil_values = [50, 55, 60, 65, 70]
         gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
         
