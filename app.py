@@ -508,6 +508,10 @@ def run_ngl_yield_bid_sensitivity(slot_df, deal_inputs, ngl_yield_values, bid_va
     irr_table = pd.DataFrame(index=bid_values, columns=ngl_yield_values, dtype=float)
     moic_table = pd.DataFrame(index=bid_values, columns=ngl_yield_values, dtype=float)
 
+    # This is the displayed/base weighted-average NGL yield.
+    # At this exact value, delta = 0, so each slot keeps its actual original NGL yield.
+    base_ngl_yield = weighted_avg_by_net_acres(slot_df, "ngl_yield")
+
     for ngl_yield in ngl_yield_values:
         for bid in bid_values:
             sens_deal_inputs = deal_inputs.copy()
@@ -515,7 +519,15 @@ def run_ngl_yield_bid_sensitivity(slot_df, deal_inputs, ngl_yield_values, bid_va
             sens_deal_inputs["bid_override"] = float(bid)
 
             sens_slot_df = slot_df.copy()
-            sens_slot_df["ngl_yield"] = float(ngl_yield)
+
+            # Apply sensitivity as +/- change from the base weighted average,
+            # instead of setting every slot to the same absolute NGL yield.
+            ngl_delta = float(ngl_yield) - float(base_ngl_yield)
+
+            sens_slot_df["ngl_yield"] = (
+                pd.to_numeric(sens_slot_df["ngl_yield"], errors="coerce").fillna(0.0)
+                + ngl_delta
+            ).clip(lower=0.0)
 
             try:
                 _, _, _, _, irr, moic = run_deal_model(sens_slot_df, sens_deal_inputs)
