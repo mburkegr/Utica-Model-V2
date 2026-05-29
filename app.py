@@ -347,6 +347,18 @@ def apply_calc_unit_acres(df):
 def build_sensitivity_range(base_value, step, steps_each_way=3):
     return [base_value + step * i for i in range(-steps_each_way, steps_each_way + 1)]
 
+def weighted_avg_by_net_acres(slot_df, value_col, weight_col="net_acres"):
+    """Return a net-acre weighted average for a slot-level input."""
+    values = pd.to_numeric(slot_df[value_col], errors="coerce")
+    weights = pd.to_numeric(slot_df[weight_col], errors="coerce").fillna(0.0)
+
+    valid = values.notna() & weights.gt(0)
+
+    if not valid.any():
+        return float(values.mean()) if values.notna().any() else 0.0
+
+    return float((values[valid] * weights[valid]).sum() / weights[valid].sum())
+
 @st.cache_data(show_spinner=False)
 def run_individual_slot_returns(slot_df, deal_inputs):
     slot_returns = {}
@@ -1917,7 +1929,7 @@ def build_scenario_scatter_chart(slot_df, deal_inputs, base_bid, base_dc):
 
             legend_seen.add(dc_case)
 
-    base_tc_risk = round(float(slot_df["tc_risk"].mean()), 2)
+    base_tc_risk = round(weighted_avg_by_net_acres(slot_df, "tc_risk"), 2)
     base_bid_rounded = round(float(base_bid), 2)
     
     base_points = chart_df[
@@ -2117,19 +2129,19 @@ def build_email_html(
     base_dc = (
         float(deal_inputs["dc_override"])
         if deal_inputs["use_dc_override"]
-        else float(slot_df["dc_costs"].mean())
+        else weighted_avg_by_net_acres(slot_df, "dc_costs")
     )
-
+    
     base_bid = (
         float(deal_inputs["bid_override"])
         if deal_inputs["use_bid_override"]
-        else float(slot_df["bid_per_acre"].mean())
+        else weighted_avg_by_net_acres(slot_df, "bid_per_acre")
     )
-
+    
     total_wells = float(slot_df["gross_wells"].sum())
-    avg_ll = float(slot_df["lateral_length"].mean())
-    avg_pct_unitized = float(slot_df["pct_unitized"].mean())
-    avg_tc_risk = float(slot_df["tc_risk"].mean())
+    avg_ll = weighted_avg_by_net_acres(slot_df, "lateral_length")
+    avg_pct_unitized = weighted_avg_by_net_acres(slot_df, "pct_unitized")
+    avg_tc_risk = weighted_avg_by_net_acres(slot_df, "tc_risk")
 
     tc_names = slot_df["tc_name"].dropna().astype(str).unique().tolist()
     tc_name_text = ", ".join(tc_names)
@@ -2743,8 +2755,17 @@ if (
     with col5:
         st.metric("MOIC", format_accounting_number(moic, decimals=2, suffix="x", zero_as_dash=False) if moic is not None else "N/A")
 
-    base_dc = deal_inputs["dc_override"] if deal_inputs["use_dc_override"] else float(slot_df["dc_costs"].mean())
-    base_bid = deal_inputs["bid_override"] if deal_inputs["use_bid_override"] else float(slot_df["bid_per_acre"].mean())
+    base_dc = (
+        deal_inputs["dc_override"]
+        if deal_inputs["use_dc_override"]
+        else weighted_avg_by_net_acres(slot_df, "dc_costs")
+    )
+    
+    base_bid = (
+        deal_inputs["bid_override"]
+        if deal_inputs["use_bid_override"]
+        else weighted_avg_by_net_acres(slot_df, "bid_per_acre")
+    )
 
     if not disable_heavy_outputs:
         st.subheader("Sensitivity Tables")
@@ -2788,7 +2809,7 @@ if (
         oil_values = [50, 55, 60, 65, 70]
         gas_values = [3.25, 3.50, 3.75, 4.00, 4.25]
         
-        base_ngl_yield = float(slot_df["ngl_yield"].mean())
+        base_ngl_yield = weighted_avg_by_net_acres(slot_df, "ngl_yield")
         ngl_yield_values = sorted(
             {
                 round(max(0.0, base_ngl_yield + 0.50 * i), 2)
@@ -2924,7 +2945,7 @@ if (
             bid_values=bid_values,
         )
     
-        base_tc_risk = float(slot_df["tc_risk"].iloc[0])
+        base_tc_risk = weighted_avg_by_net_acres(slot_df, "tc_risk")
     
         irr_tcrisk_bid_heatmap = build_heatmap(
             irr_tcrisk_bid_df,
