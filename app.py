@@ -278,6 +278,7 @@ def build_slot_template(num_slots):
         rows.append(
             {
                 "include_slot": True,
+                "dale_promote": False,
                 "slot_id": i,
                 "tc_name": "Choose TC",
                 "gross_wells": 1.0,
@@ -2306,6 +2307,12 @@ if "slot_df" not in st.session_state:
 
 if "include_slot" not in st.session_state["slot_df"].columns:
     st.session_state["slot_df"].insert(0, "include_slot", True)
+    
+if "dale_promote" not in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"].insert(1, "dale_promote", False)
+
+if "model_deal_inputs" not in st.session_state:
+    st.session_state["model_deal_inputs"] = None
 
 if "deal_df" not in st.session_state:
     st.session_state["deal_df"] = None
@@ -2442,7 +2449,11 @@ with st.sidebar.expander("NGL Component Prices", expanded=False):
     price_pentanes = st.number_input("Pentanes Price", value=1.22125, step=0.01, format="%.5f")
 
 st.sidebar.subheader("Dale Promote")
-promote_enabled = st.sidebar.checkbox("Dale Promote On", value=False)
+
+dale_promote_override = st.sidebar.checkbox(
+    "Dale Promote Override - Apply to All Slots",
+    value=False,
+)
 
 promote_rate = st.sidebar.number_input(
     "Promote",
@@ -2507,7 +2518,8 @@ deal_inputs = {
     "price_isobutane": price_isobutane,
     "price_butane": price_butane,
     "price_pentanes": price_pentanes,
-    "promote_enabled": promote_enabled,
+    "dale_promote_override": dale_promote_override,
+    "promote_enabled": False,  # set right before model run based on selected slots
     "promote_rate": promote_rate if promote_enabled else 0.0,
     "promote_multiple": promote_multiple if promote_enabled else 0.0,
     "promote_irr_threshold": promote_irr_threshold if promote_enabled else 0.0,
@@ -2562,6 +2574,7 @@ with st.form("slot_inputs_form"):
     key="slot_editor",
     column_order=[
         "include_slot",
+        "dale_promote",
         "slot_id",
         "tc_name",
         "gross_wells",
@@ -2589,6 +2602,11 @@ with st.form("slot_inputs_form"):
             "Include",
             help="Include this slot in the model run.",
             default=True,
+        ),
+        "dale_promote": st.column_config.CheckboxColumn(
+            "Dale Promote",
+            help="Include this slot in the Dale promote calculation.",
+            default=False,
         ),
         "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
         "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
@@ -2659,11 +2677,26 @@ if run_model_clicked:
 
     else:
         model_slot_df = included_slot_df.drop(columns=["include_slot"], errors="ignore").copy()
-
+        
+        if deal_inputs.get("dale_promote_override", False):
+            model_slot_df["dale_promote"] = True
+        
+        run_deal_inputs = deal_inputs.copy()
+        run_deal_inputs["promote_enabled"] = bool(
+            model_slot_df["dale_promote"].fillna(False).any()
+        )
+        
+        if not run_deal_inputs["promote_enabled"]:
+            run_deal_inputs["promote_rate"] = 0.0
+            run_deal_inputs["promote_multiple"] = 0.0
+            run_deal_inputs["promote_irr_threshold"] = 0.0
+        
         all_slots_df, deal_df, slot_audit_df, deal_audit_df, irr, moic = run_deal_model(
             model_slot_df,
-            deal_inputs,
+            run_deal_inputs,
         )
+        
+        st.session_state["model_deal_inputs"] = run_deal_inputs
 
         st.session_state["model_slot_df"] = model_slot_df
         st.session_state["all_slots_df"] = all_slots_df
@@ -2731,6 +2764,7 @@ if (
     deal_audit_df = st.session_state["deal_audit_df"]
     slot_audit_df = st.session_state["slot_audit_df"]
     slot_df = st.session_state["model_slot_df"].copy()
+    deal_inputs = st.session_state.get("model_deal_inputs", deal_inputs)
 
     deal_display_df = deal_audit_df[[col for col in DEAL_DISPLAY_COLS if col in deal_audit_df.columns]].copy()
     slot_display_df = slot_audit_df[[col for col in SLOT_DISPLAY_COLS if col in slot_audit_df.columns]].copy()
