@@ -2460,7 +2460,7 @@ promote_rate = st.sidebar.number_input(
     value=0.0625,
     step=0.01,
     format="%.4f",
-    disabled=not promote_enabled,
+    disabled=False,
 )
 
 promote_multiple = st.sidebar.number_input(
@@ -2468,7 +2468,7 @@ promote_multiple = st.sidebar.number_input(
     value=1.00,
     step=0.05,
     format="%.2f",
-    disabled=not promote_enabled,
+    disabled=False,
 )
 
 promote_irr_threshold = st.sidebar.number_input(
@@ -2476,7 +2476,7 @@ promote_irr_threshold = st.sidebar.number_input(
     value=0.00,
     step=0.01,
     format="%.4f",
-    disabled=not promote_enabled,
+    disabled=False,
 )
 
 deal_inputs = {
