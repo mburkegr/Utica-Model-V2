@@ -2520,9 +2520,9 @@ deal_inputs = {
     "price_pentanes": price_pentanes,
     "dale_promote_override": dale_promote_override,
     "promote_enabled": False,  # set right before model run based on selected slots
-    "promote_rate": promote_rate if promote_enabled else 0.0,
-    "promote_multiple": promote_multiple if promote_enabled else 0.0,
-    "promote_irr_threshold": promote_irr_threshold if promote_enabled else 0.0,
+    "promote_rate": promote_rate,
+    "promote_multiple": promote_multiple,
+    "promote_irr_threshold": promote_irr_threshold,
 }
 
 
