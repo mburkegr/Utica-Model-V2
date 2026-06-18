@@ -422,6 +422,7 @@ def build_slot_financials(
     net_wells = float(slot["net_wells_calc"])
 
     df["slot_id"] = slot["slot_id"]
+    df["dale_promote"] = bool(slot.get("dale_promote", False))
     df["tc_name"] = slot["tc_name"]
 
     df["slot_gross_oil_production"] = df["gross_oil_production"] * gross_wells
@@ -685,7 +686,71 @@ def add_promote_test_columns(df, deal_settings):
     )
 
     return df
-
+    
+    def apply_promote_to_slots(all_slots_df, deal_settings):
+        df = all_slots_df.copy()
+    
+        if "dale_promote" not in df.columns:
+            df["dale_promote"] = False
+    
+        df["dale_promote"] = df["dale_promote"].fillna(False).astype(bool)
+        df["slot_promote"] = 0.0
+    
+        if not bool(deal_settings["promote_enabled"]):
+            df["slot_total_cash_flow"] = (
+                df["slot_pud_cash_flow"]
+                + df["slot_asset_purchase"]
+                + df["slot_promote"]
+            )
+            return df
+    
+        promoted_mask = df["dale_promote"]
+    
+        if not promoted_mask.any():
+            df["slot_total_cash_flow"] = (
+                df["slot_pud_cash_flow"]
+                + df["slot_asset_purchase"]
+                + df["slot_promote"]
+            )
+            return df
+    
+        promoted_deal_df = roll_up_deal(df.loc[promoted_mask].copy())
+        promoted_deal_df = add_promote_test_columns(promoted_deal_df, deal_settings)
+    
+        monthly_promote = promoted_deal_df[["date", "slot_promote"]].rename(
+            columns={"slot_promote": "monthly_promote_total"}
+        )
+    
+        df = df.merge(monthly_promote, on="date", how="left")
+        df["monthly_promote_total"] = df["monthly_promote_total"].fillna(0.0)
+    
+        df["promoted_monthly_pud_cf"] = np.nan
+        df.loc[promoted_mask, "promoted_monthly_pud_cf"] = (
+            df.loc[promoted_mask]
+            .groupby("date")["slot_pud_cash_flow"]
+            .transform("sum")
+        )
+    
+        alloc_mask = promoted_mask & df["promoted_monthly_pud_cf"].ne(0)
+    
+        df.loc[alloc_mask, "slot_promote"] = (
+            df.loc[alloc_mask, "monthly_promote_total"]
+            * df.loc[alloc_mask, "slot_pud_cash_flow"]
+            / df.loc[alloc_mask, "promoted_monthly_pud_cf"]
+        )
+    
+        df["slot_total_cash_flow"] = (
+            df["slot_pud_cash_flow"]
+            + df["slot_asset_purchase"]
+            + df["slot_promote"]
+        )
+    
+        df = df.drop(
+            columns=["monthly_promote_total", "promoted_monthly_pud_cf"],
+            errors="ignore",
+        )
+    
+        return df
 
 def calc_financial_irr(df):
     if pyxirr is None:
@@ -794,6 +859,7 @@ def prepare_slot_inputs(slot_df, deal_inputs):
 
     required_defaults = {
         "slot_id": 0,
+        "dale_promote": False,
         "use_calc_unit_acres": False,
         "flowback_delay": 4,
         "tc_risk": 1.0,
@@ -956,9 +1022,10 @@ def run_deal_model(slot_df, deal_inputs, type_curve_file="type_curve_library.xls
         global_assumptions=global_assumptions,
     )
 
+    all_slots_df = apply_promote_to_slots(all_slots_df, deal_settings)
+    
     deal_df = roll_up_deal(all_slots_df)
-    deal_df = add_promote_test_columns(deal_df, deal_settings)
-
+    
     slot_audit_df = build_slot_audit_view(all_slots_df)
     deal_audit_df = build_deal_audit_view(deal_df)
 
