@@ -686,71 +686,71 @@ def add_promote_test_columns(df, deal_settings):
     )
 
     return df
-    
-    def apply_promote_to_slots(all_slots_df, deal_settings):
-        df = all_slots_df.copy()
-    
-        if "dale_promote" not in df.columns:
-            df["dale_promote"] = False
-    
-        df["dale_promote"] = df["dale_promote"].fillna(False).astype(bool)
-        df["slot_promote"] = 0.0
-    
-        if not bool(deal_settings["promote_enabled"]):
-            df["slot_total_cash_flow"] = (
-                df["slot_pud_cash_flow"]
-                + df["slot_asset_purchase"]
-                + df["slot_promote"]
-            )
-            return df
-    
-        promoted_mask = df["dale_promote"]
-    
-        if not promoted_mask.any():
-            df["slot_total_cash_flow"] = (
-                df["slot_pud_cash_flow"]
-                + df["slot_asset_purchase"]
-                + df["slot_promote"]
-            )
-            return df
-    
-        promoted_deal_df = roll_up_deal(df.loc[promoted_mask].copy())
-        promoted_deal_df = add_promote_test_columns(promoted_deal_df, deal_settings)
-    
-        monthly_promote = promoted_deal_df[["date", "slot_promote"]].rename(
-            columns={"slot_promote": "monthly_promote_total"}
-        )
-    
-        df = df.merge(monthly_promote, on="date", how="left")
-        df["monthly_promote_total"] = df["monthly_promote_total"].fillna(0.0)
-    
-        df["promoted_monthly_pud_cf"] = np.nan
-        df.loc[promoted_mask, "promoted_monthly_pud_cf"] = (
-            df.loc[promoted_mask]
-            .groupby("date")["slot_pud_cash_flow"]
-            .transform("sum")
-        )
-    
-        alloc_mask = promoted_mask & df["promoted_monthly_pud_cf"].ne(0)
-    
-        df.loc[alloc_mask, "slot_promote"] = (
-            df.loc[alloc_mask, "monthly_promote_total"]
-            * df.loc[alloc_mask, "slot_pud_cash_flow"]
-            / df.loc[alloc_mask, "promoted_monthly_pud_cf"]
-        )
-    
+
+def apply_promote_to_slots(all_slots_df, deal_settings):
+    df = all_slots_df.copy()
+
+    if "dale_promote" not in df.columns:
+        df["dale_promote"] = False
+
+    df["dale_promote"] = df["dale_promote"].fillna(False).astype(bool)
+    df["slot_promote"] = 0.0
+
+    if not bool(deal_settings["promote_enabled"]):
         df["slot_total_cash_flow"] = (
             df["slot_pud_cash_flow"]
             + df["slot_asset_purchase"]
             + df["slot_promote"]
         )
-    
-        df = df.drop(
-            columns=["monthly_promote_total", "promoted_monthly_pud_cf"],
-            errors="ignore",
-        )
-    
         return df
+
+    promoted_mask = df["dale_promote"]
+
+    if not promoted_mask.any():
+        df["slot_total_cash_flow"] = (
+            df["slot_pud_cash_flow"]
+            + df["slot_asset_purchase"]
+            + df["slot_promote"]
+        )
+        return df
+
+    promoted_deal_df = roll_up_deal(df.loc[promoted_mask].copy())
+    promoted_deal_df = add_promote_test_columns(promoted_deal_df, deal_settings)
+
+    monthly_promote = promoted_deal_df[["date", "slot_promote"]].rename(
+        columns={"slot_promote": "monthly_promote_total"}
+    )
+
+    df = df.merge(monthly_promote, on="date", how="left")
+    df["monthly_promote_total"] = df["monthly_promote_total"].fillna(0.0)
+
+    df["promoted_monthly_pud_cf"] = 0.0
+    df.loc[promoted_mask, "promoted_monthly_pud_cf"] = (
+        df.loc[promoted_mask]
+        .groupby("date")["slot_pud_cash_flow"]
+        .transform("sum")
+    )
+
+    alloc_mask = promoted_mask & df["promoted_monthly_pud_cf"].ne(0)
+
+    df.loc[alloc_mask, "slot_promote"] = (
+        df.loc[alloc_mask, "monthly_promote_total"]
+        * df.loc[alloc_mask, "slot_pud_cash_flow"]
+        / df.loc[alloc_mask, "promoted_monthly_pud_cf"]
+    )
+
+    df["slot_total_cash_flow"] = (
+        df["slot_pud_cash_flow"]
+        + df["slot_asset_purchase"]
+        + df["slot_promote"]
+    )
+
+    df = df.drop(
+        columns=["monthly_promote_total", "promoted_monthly_pud_cf"],
+        errors="ignore",
+    )
+
+    return df
 
 def calc_financial_irr(df):
     if pyxirr is None:
