@@ -2634,13 +2634,11 @@ with st.form("slot_inputs_form"):
         "carry_wi_reversion_pct": st.column_config.NumberColumn(
             "WI Given Up",
             min_value=0.0,
-            max_value=1.0,
-            step=0.05,
+            max_value=100.0,
+            step=5.0,
             format="%.0f%%",
-            help=(
-                "Percentage of our original WI surrendered beginning with "
-                "the first production month. Example: 35% means we retain 65%."
-            ),
+            help="Enter 35 for a 35% WI reversion.",
+        ),
         ),
         "carry_wi_reversion_pct": st.column_config.NumberColumn(
             "WI Reversion",
@@ -2709,7 +2707,7 @@ if apply_slot_changes:
             errors="coerce",
         )
         .fillna(0.0)
-        .clip(lower=0.0, upper=1.0)
+        .clip(lower=0.0, upper=100.0)
     )
     st.session_state["slot_df"] = apply_calc_unit_acres(cleaned_slot_df)
     st.session_state["model_has_run"] = False
