@@ -280,8 +280,7 @@ def build_slot_template(num_slots):
                 "include_slot": True,
                 "dale_promote": False,
                 "carry_enabled": False,
-                "carry_dnc_pct": 1.00,
-                "carry_wi_reversion_pct": 0.35,
+                "carry_wi_reversion_pct": 0.0,
                 "slot_id": i,
                 "tc_name": "Choose TC",
                 "gross_wells": 1.0,
@@ -2317,11 +2316,13 @@ if "dale_promote" not in st.session_state["slot_df"].columns:
 if "carry_enabled" not in st.session_state["slot_df"].columns:
     st.session_state["slot_df"].insert(2, "carry_enabled", False)
 
-if "carry_dnc_pct" not in st.session_state["slot_df"].columns:
-    st.session_state["slot_df"]["carry_dnc_pct"] = 1.00
+if "carry_dnc_pct" in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"] = st.session_state["slot_df"].drop(
+        columns=["carry_dnc_pct"]
+    )
 
 if "carry_wi_reversion_pct" not in st.session_state["slot_df"].columns:
-    st.session_state["slot_df"]["carry_wi_reversion_pct"] = 0.35
+    st.session_state["slot_df"]["carry_wi_reversion_pct"] = 0.0
 
 if "model_deal_inputs" not in st.session_state:
     st.session_state["model_deal_inputs"] = None
@@ -2588,7 +2589,6 @@ with st.form("slot_inputs_form"):
         "include_slot",
         "dale_promote",
         "carry_enabled",
-        "carry_dnc_pct",
         "carry_wi_reversion_pct",
         "slot_id",
         "tc_name",
@@ -2624,17 +2624,23 @@ with st.form("slot_inputs_form"):
             default=False,
         ),
         "carry_enabled": st.column_config.CheckboxColumn(
-            "D&C Carry",
-            help="Apply a D&C carry and post-production WI reversion to this slot.",
+            "Carry / WI Reversion",
+            help=(
+                "We fund D&C at our original WI, then surrender a portion "
+                "of our original WI beginning with first production."
+            ),
             default=False,
         ),
-        "carry_dnc_pct": st.column_config.NumberColumn(
-            "D&C Carried",
+        "carry_wi_reversion_pct": st.column_config.NumberColumn(
+            "WI Given Up",
             min_value=0.0,
             max_value=1.0,
             step=0.05,
             format="%.0f%%",
-            help="Percentage of our original D&C obligation funded by the carry counterparty.",
+            help=(
+                "Percentage of our original WI surrendered beginning with "
+                "the first production month. Example: 35% means we retain 65%."
+            ),
         ),
         "carry_wi_reversion_pct": st.column_config.NumberColumn(
             "WI Reversion",
@@ -2690,7 +2696,21 @@ if apply_slot_changes:
         cleaned_slot_df["tc_risk"],
         errors="coerce",
     ).fillna(1.0).astype(float)
+    
+    cleaned_slot_df["carry_enabled"] = (
+        cleaned_slot_df["carry_enabled"]
+        .fillna(False)
+        .astype(bool)
+    )
 
+    cleaned_slot_df["carry_wi_reversion_pct"] = (
+        pd.to_numeric(
+            cleaned_slot_df["carry_wi_reversion_pct"],
+            errors="coerce",
+        )
+        .fillna(0.0)
+        .clip(lower=0.0, upper=1.0)
+    )
     st.session_state["slot_df"] = apply_calc_unit_acres(cleaned_slot_df)
     st.session_state["model_has_run"] = False
 
