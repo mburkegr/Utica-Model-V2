@@ -423,17 +423,9 @@ def build_slot_financials(
     base_net_wells = float(slot["net_wells_calc"])
     lease_nri = float(slot["net_revenue_interest"])
 
-    # Carry inputs:
-    # - carry_dnc_pct is the portion of OUR original D&C obligation paid by the counterparty.
-    # - carry_wi_reversion_pct is the portion of OUR original WI surrendered at first production.
+    # We fund D&C at our original WI, then surrender a portion of
+    # our original WI beginning with first production.
     carry_enabled = bool(slot.get("carry_enabled", False))
-
-    carry_dnc_pct = (
-        float(slot.get("carry_dnc_pct", 0.0))
-        if carry_enabled
-        else 0.0
-    )
-    carry_dnc_pct = float(np.clip(carry_dnc_pct, 0.0, 1.0))
 
     carry_wi_reversion_pct = (
         float(slot.get("carry_wi_reversion_pct", 0.0))
@@ -535,16 +527,8 @@ def build_slot_financials(
     df["slot_loe"] = df["total_loe"] * df["effective_net_wells"]
     df["slot_tax"] = df["tax"] * df["effective_net_wells"]
 
-    # Show both gross-interest D&C and the carry funding separately.
-    # A 100% D&C carry results in zero net D&C cash paid by us.
-    df["slot_capex_gross_interest"] = df["capex"] * base_net_wells
-    df["slot_carry_funding"] = (
-        -df["slot_capex_gross_interest"] * carry_dnc_pct
-    )
-    df["slot_capex"] = (
-        df["slot_capex_gross_interest"]
-        + df["slot_carry_funding"]
-    )
+       # We pay D&C at our full original WI before the WI reversion.
+    df["slot_capex"] = df["capex"] * base_net_wells
 
     df["slot_operating_profit"] = (
         df["slot_total_revenue"] + df["slot_loe"] + df["slot_tax"]
@@ -954,7 +938,7 @@ def prepare_slot_inputs(slot_df, deal_inputs):
         "slot_id": 0,
         "dale_promote": False,
         "carry_enabled": False,
-        "carry_dnc_pct": 0.0,
+        "carry_dnc_pct",
         "carry_wi_reversion_pct": 0.0,
         "use_calc_unit_acres": False,
         "flowback_delay": 4,
@@ -1020,12 +1004,6 @@ def prepare_slot_inputs(slot_df, deal_inputs):
     df["tc_name"] = df["tc_name"].astype(str)
 
     df["carry_enabled"] = df["carry_enabled"].astype(bool)
-
-    df["carry_dnc_pct"] = (
-        pd.to_numeric(df["carry_dnc_pct"], errors="coerce")
-        .fillna(0.0)
-        .clip(lower=0.0, upper=1.0)
-    )
 
     df["carry_wi_reversion_pct"] = (
         pd.to_numeric(df["carry_wi_reversion_pct"], errors="coerce")
