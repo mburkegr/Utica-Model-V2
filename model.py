@@ -974,7 +974,6 @@ def prepare_slot_inputs(slot_df, deal_inputs):
 
     numeric_cols = [
         "slot_id",
-        "carry_dnc_pct",
         "carry_wi_reversion_pct",
         "lateral_length",
         "gross_wells",
