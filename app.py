@@ -279,6 +279,9 @@ def build_slot_template(num_slots):
             {
                 "include_slot": True,
                 "dale_promote": False,
+                "carry_enabled": False,
+                "carry_dnc_pct": 1.00,
+                "carry_wi_reversion_pct": 0.35,
                 "slot_id": i,
                 "tc_name": "Choose TC",
                 "gross_wells": 1.0,
@@ -2311,6 +2314,15 @@ if "include_slot" not in st.session_state["slot_df"].columns:
 if "dale_promote" not in st.session_state["slot_df"].columns:
     st.session_state["slot_df"].insert(1, "dale_promote", False)
 
+if "carry_enabled" not in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"].insert(2, "carry_enabled", False)
+
+if "carry_dnc_pct" not in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"]["carry_dnc_pct"] = 1.00
+
+if "carry_wi_reversion_pct" not in st.session_state["slot_df"].columns:
+    st.session_state["slot_df"]["carry_wi_reversion_pct"] = 0.35
+
 if "model_deal_inputs" not in st.session_state:
     st.session_state["model_deal_inputs"] = None
 
@@ -2575,6 +2587,9 @@ with st.form("slot_inputs_form"):
     column_order=[
         "include_slot",
         "dale_promote",
+        "carry_enabled",
+        "carry_dnc_pct",
+        "carry_wi_reversion_pct",
         "slot_id",
         "tc_name",
         "gross_wells",
@@ -2607,6 +2622,27 @@ with st.form("slot_inputs_form"):
             "Dale Promote",
             help="Include this slot in the Dale promote calculation.",
             default=False,
+        ),
+        "carry_enabled": st.column_config.CheckboxColumn(
+            "D&C Carry",
+            help="Apply a D&C carry and post-production WI reversion to this slot.",
+            default=False,
+        ),
+        "carry_dnc_pct": st.column_config.NumberColumn(
+            "D&C Carried",
+            min_value=0.0,
+            max_value=1.0,
+            step=0.05,
+            format="%.0f%%",
+            help="Percentage of our original D&C obligation funded by the carry counterparty.",
+        ),
+        "carry_wi_reversion_pct": st.column_config.NumberColumn(
+            "WI Reversion",
+            min_value=0.0,
+            max_value=1.0,
+            step=0.05,
+            format="%.0f%%",
+            help="Percentage of our original WI surrendered beginning with first production.",
         ),
         "slot_id": st.column_config.NumberColumn("Slot", format="%d", disabled=True),
         "tc_name": st.column_config.SelectboxColumn("Type Curve", options=tc_names, required=True),
