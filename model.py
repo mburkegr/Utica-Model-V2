@@ -1007,6 +1007,7 @@ def prepare_slot_inputs(slot_df, deal_inputs):
         pd.to_numeric(df["carry_wi_reversion_pct"], errors="coerce")
         .fillna(0.0)
         .clip(lower=0.0, upper=100.0)
+        / 100.0
     )
 
     # App input is entered as a whole percent: 35 = 35%.
