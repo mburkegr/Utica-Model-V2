@@ -938,7 +938,6 @@ def prepare_slot_inputs(slot_df, deal_inputs):
         "slot_id": 0,
         "dale_promote": False,
         "carry_enabled": False,
-        "carry_dnc_pct",
         "carry_wi_reversion_pct": 0.0,
         "use_calc_unit_acres": False,
         "flowback_delay": 4,
