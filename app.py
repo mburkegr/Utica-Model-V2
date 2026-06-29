@@ -2639,7 +2639,6 @@ with st.form("slot_inputs_form"):
             format="%.0f%%",
             help="Enter 35 for a 35% WI reversion.",
         ),
-        ),
         "carry_wi_reversion_pct": st.column_config.NumberColumn(
             "WI Reversion",
             min_value=0.0,
